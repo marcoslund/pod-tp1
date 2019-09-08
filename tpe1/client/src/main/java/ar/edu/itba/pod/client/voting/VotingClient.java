@@ -22,6 +22,8 @@ public class VotingClient extends Client {
         System.out.println("serverAddr: " + serverAddress + "; votesPath: " + filename);
 
         parseCsv();
+
+        System.out.println(votes);
     }
 
     private static boolean parseArguments() {

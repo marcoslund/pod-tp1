@@ -23,20 +23,15 @@ class CsvParser {
         List<Vote> votes = new ArrayList<>();
         try(BufferedReader br = new BufferedReader(new FileReader(path))) {
             String line;
+
             for(int i = 0; (line = br.readLine()) != null; i++) {
                 String[] voteStr = line.split(SEPARATOR);
-                printLine(voteStr);
                 try {
-                    int pollingPlaceNumber = Integer.parseInt(voteStr[POLLING_PLACE_LINE]);
-                    System.out.println("pollingPlaceNumber: " + pollingPlaceNumber);
-                    State state = State.valueOf(voteStr[STATE_LINE]);
-                    System.out.println("State: " + state);
                     Vote vote = new Vote(
-                            pollingPlaceNumber,
-                            state,
+                            Integer.parseInt(voteStr[POLLING_PLACE_LINE]),
+                            State.valueOf(voteStr[STATE_LINE]),
                             findParties(voteStr[PARTIES_LINE].split(PARTIES_SEPARATOR))
                     );
-                    System.out.println("vote: " + vote);
                     votes.add(vote);
                 } catch(IllegalArgumentException e) {
                     throw new InvalidCsvException(
@@ -55,13 +50,6 @@ class CsvParser {
 
     private static PoliticalParty partyFromString(final String str) {
         return PoliticalParty.valueOf(str.toUpperCase());
-    }
-
-    private static void printLine(final String[] line) {
-        System.out.println("Line:");
-        for(String str : line)
-            System.out.print(str + " ");
-        System.out.print('\n');
     }
 
 }
