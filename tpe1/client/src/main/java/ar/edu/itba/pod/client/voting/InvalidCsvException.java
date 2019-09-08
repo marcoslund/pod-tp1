@@ -1,10 +1,12 @@
 package ar.edu.itba.pod.client.voting;
 
-public class InvalidCsvException extends Exception {
-    public int lineNumber;
+class InvalidCsvException extends Exception {
+    protected int lineNumber;
+    protected String line;
 
-    public InvalidCsvException(String msg, int lineNumber) {
+    public InvalidCsvException(String msg, int lineNumber, String line) {
         super(msg);
         this.lineNumber = lineNumber;
+        this.line = line;
     }
 }

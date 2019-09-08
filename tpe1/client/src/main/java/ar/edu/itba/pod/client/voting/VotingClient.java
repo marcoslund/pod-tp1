@@ -48,7 +48,7 @@ public class VotingClient extends Client {
             e.printStackTrace();
             System.exit(1);
         } catch(InvalidCsvException e) {
-            LOGGER.error("Error reading {} file at line {}", filename, e.lineNumber);
+            LOGGER.error("Error reading {} file at line {} (got {})", filename, e.lineNumber, e.line);
             System.exit(1);
         }
     }

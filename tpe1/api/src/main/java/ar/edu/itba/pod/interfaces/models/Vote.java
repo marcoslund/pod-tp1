@@ -40,6 +40,15 @@ public class Vote {
         }
     }
 
+    @Override
+    public String toString() {
+        return "Polling Place No.: " + pollingPlaceNumber +
+                "; State: " + state +
+                "; Main vote: " + getMainChoice() +
+                "; Second vote: " + getSecondChoice().orElse(null) +
+                "; Third vote: " + getThirdChoice().orElse(null);
+    }
+
     public int getPollingPlaceNumber() {
         return pollingPlaceNumber;
     }
