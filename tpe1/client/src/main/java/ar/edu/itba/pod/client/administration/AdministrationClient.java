@@ -11,12 +11,16 @@ public class AdministrationClient extends Client {
 
     public static void main(String[] args) {
         LOGGER.info("tpe1 AdministrationClient Starting ...");
+        if(!parseArguments())
+            System.exit(1);
+        System.out.println("serverAddr: " + serverAddress + "; action: " + action);
+    }
+
+    private static boolean parseArguments() {
         boolean success;
         success = parseServerAddress(LOGGER);
         success &= parseAction();
-        if(!success)
-            System.exit(1);
-        System.out.println("serverAddr: " + serverAddress + "; action: " + action);
+        return success;
     }
 
     private static boolean parseAction() {

@@ -12,14 +12,18 @@ public class MonitoringClient extends Client {
 
     public static void main(String[] args) {
         LOGGER.info("tpe1 MonitoringClient Starting ...");
+        if(!parseArguments())
+            System.exit(1);
+        System.out.println("serverAddr: " + serverAddress + "; pollingPlace: " + pollingPlaceNumber
+            + "; party: " + politicalParty);
+    }
+
+    private static boolean parseArguments() {
         boolean success;
         success = parseServerAddress(LOGGER);
         success &= parsePollingPlaceNumber();
         success &= parsePartyName();
-        if(!success)
-            System.exit(1);
-        System.out.println("serverAddr: " + serverAddress + "; pollingPlace: " + pollingPlaceNumber
-            + "; party: " + politicalParty);
+        return success;
     }
 
     private static boolean parsePollingPlaceNumber() {

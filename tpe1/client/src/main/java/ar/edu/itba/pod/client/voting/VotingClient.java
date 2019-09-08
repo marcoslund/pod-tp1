@@ -10,12 +10,16 @@ public class VotingClient extends Client {
 
     public static void main(String[] args) {
         LOGGER.info("tpe1 VotingClient Starting ...");
+        if(!parseArguments())
+            System.exit(1);
+        System.out.println("serverAddr: " + serverAddress + "; votesPath: " + filename);
+    }
+
+    private static boolean parseArguments() {
         boolean success;
         success = parseServerAddress(LOGGER);
         success &= parseFilename();
-        if(!success)
-            System.exit(1);
-        System.out.println("serverAddr: " + serverAddress + "; votesPath: " + filename);
+        return success;
     }
 
     private static boolean parseFilename() {

@@ -14,19 +14,23 @@ public class QueryClient extends Client {
 
     public static void main(String[] args) {
         LOGGER.info("tpe1 QueryClient Starting ...");
+        if(!parseArguments())
+            System.exit(1);
+        System.out.println("servAdd: " + serverAddress + "; state: " + state +
+                "; id: " + pollingPlaceNumber + "; filename: " + filename);
+    }
+
+    private static boolean parseArguments() {
         boolean success;
         success = parseServerAddress(LOGGER);
         success &= (parseState() ^ parsePollingNumber());
         success &= parseFilename();
         if(!success) {
-            if (state != null && (parsedPollingPlaceNumber)) {
+            if (state != null && parsedPollingPlaceNumber) {
                 LOGGER.error("Either the state or the pollingPlaceNumber (id) must be passed.");
             }
-            System.exit(1);
         }
-
-        System.out.println("servAdd: " + serverAddress + "; state: " + state +
-                "; id: " + pollingPlaceNumber + "; filename: " + filename);
+        return success;
     }
 
     private static boolean parseState() {
