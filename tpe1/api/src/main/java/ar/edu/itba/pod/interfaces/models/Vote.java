@@ -1,42 +1,74 @@
 package ar.edu.itba.pod.interfaces.models;
 
 import ar.edu.itba.pod.interfaces.PoliticalParty;
+import ar.edu.itba.pod.interfaces.State;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class Vote {
 
-    private final PoliticalParty mainChoice;
-    private final PoliticalParty secondChoice;
-    private final PoliticalParty thirdChoice;
+    public static final int PARTY_COUNT = 3;
+    private final int pollingPlaceNumber;
+    private final State state;
+    private final List<PoliticalParty> parties = new ArrayList<>(PARTY_COUNT);
 
-    public Vote(final PoliticalParty mainChoice) {
-        this.mainChoice = mainChoice;
-        this.secondChoice = this.thirdChoice = null;
+    public Vote(final int pollingPlaceNumber, final State state, final PoliticalParty mainChoice) {
+        this.pollingPlaceNumber = pollingPlaceNumber;
+        this.state = state;
+        parties.add(mainChoice);
     }
 
-    public Vote(final PoliticalParty mainChoice, final PoliticalParty secondChoice) {
-        this.mainChoice = mainChoice;
-        this.secondChoice = secondChoice;
-        this.thirdChoice = null;
+    public Vote(final int pollingPlaceNumber, final State state, final PoliticalParty[] parties) {
+        this.pollingPlaceNumber = pollingPlaceNumber;
+        this.state = state;
+        if(parties.length < 1)
+            throw new IllegalArgumentException("Vote must have at least one party.");
+        for(int i = 0; i < PARTY_COUNT && i < parties.length; i++) {
+            this.parties.add(parties[i]);
+        }
     }
 
-    public Vote(final PoliticalParty mainChoice, final PoliticalParty secondChoice,
-                final PoliticalParty thirdChoice) {
-        this.mainChoice = mainChoice;
-        this.secondChoice = secondChoice;
-        this.thirdChoice = thirdChoice;
+    public Vote(final int pollingPlaceNumber, final State state, final List<PoliticalParty> parties) {
+        this.pollingPlaceNumber = pollingPlaceNumber;
+        this.state = state;
+        if(parties.size() < 1)
+            throw new IllegalArgumentException("Vote must have at least one party.");
+        for(int i = 0; i < PARTY_COUNT && i < parties.size(); i++) {
+            this.parties.add(parties.get(i));
+        }
+    }
+
+    public int getPollingPlaceNumber() {
+        return pollingPlaceNumber;
+    }
+
+    public State getState() {
+        return state;
     }
 
     public PoliticalParty getMainChoice() {
-        return mainChoice;
+        return parties.get(0);
     }
 
     public Optional<PoliticalParty> getSecondChoice() {
-        return Optional.ofNullable(secondChoice);
+        Optional<PoliticalParty> pp;
+        try {
+            pp = Optional.of(parties.get(1));
+        } catch(IndexOutOfBoundsException e) {
+            return Optional.empty();
+        }
+        return pp;
     }
 
     public Optional<PoliticalParty> getThirdChoice() {
-        return Optional.ofNullable(thirdChoice);
+        Optional<PoliticalParty> pp;
+        try {
+            pp = Optional.of(parties.get(2));
+        } catch(IndexOutOfBoundsException e) {
+            return Optional.empty();
+        }
+        return pp;
     }
 }
