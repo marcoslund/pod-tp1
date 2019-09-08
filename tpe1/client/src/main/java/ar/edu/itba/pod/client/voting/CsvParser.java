@@ -48,8 +48,7 @@ class CsvParser {
     }
 
     private static List<PoliticalParty> findParties(final String[] parties) {
-        return Arrays.asList(parties)
-                .stream()
+        return Arrays.stream(parties)
                 .map(CsvParser::partyFromString)
                 .collect(Collectors.toList());
     }
