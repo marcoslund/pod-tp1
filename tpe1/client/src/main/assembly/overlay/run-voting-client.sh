@@ -1,4 +1,4 @@
 #!/bin/bash
 
-java -cp 'lib/jars/*' "ar.edu.itba.pod.client.voting.VotingClient" $*
+java -DvotesPath=../votes.csv -cp 'lib/jars/*' "ar.edu.itba.pod.client.voting.VotingClient" $*
 
