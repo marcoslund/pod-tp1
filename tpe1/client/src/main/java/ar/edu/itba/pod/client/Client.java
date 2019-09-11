@@ -22,7 +22,7 @@ public abstract class Client {
 
     protected static Remote getRemoteService(final String serviceName)
             throws MalformedURLException, RemoteException, NotBoundException {
-        return Naming.lookup("//" + serverAddress + "/service");
+        return Naming.lookup("//" + serverAddress + "/" + serviceName);
     }
 
     protected static Integer stringToInt(final String str) {
