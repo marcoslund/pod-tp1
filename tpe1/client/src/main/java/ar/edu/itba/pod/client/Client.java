@@ -2,6 +2,12 @@ package ar.edu.itba.pod.client;
 
 import org.slf4j.Logger;
 
+import java.net.MalformedURLException;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
 public abstract class Client {
     protected static String serverAddress;
 
@@ -12,6 +18,11 @@ public abstract class Client {
             return false;
         }
         return true;
+    }
+
+    protected static Remote getRemoteService(final String serviceName)
+            throws MalformedURLException, RemoteException, NotBoundException {
+        return Naming.lookup("//" + serverAddress + "/service");
     }
 
     protected static Integer stringToInt(final String str) {

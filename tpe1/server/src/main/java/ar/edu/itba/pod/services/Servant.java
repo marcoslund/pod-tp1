@@ -12,7 +12,6 @@ import ar.edu.itba.pod.interfaces.services.QueryService;
 import ar.edu.itba.pod.interfaces.services.VotingService;
 
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 
 public class Servant

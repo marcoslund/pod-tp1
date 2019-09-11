@@ -2,6 +2,7 @@ package ar.edu.itba.pod.client.voting;
 
 import ar.edu.itba.pod.client.Client;
 import ar.edu.itba.pod.interfaces.models.Vote;
+import ar.edu.itba.pod.interfaces.services.VotingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,15 +12,18 @@ import java.util.List;
 
 public class VotingClient extends Client {
     private static final Logger LOGGER = LoggerFactory.getLogger(VotingClient.class);
+    private static VotingService service;
     private static String filename;
     private static List<Vote> votes;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         LOGGER.info("tpe1 VotingClient Starting ...");
         if(!parseArguments())
             System.exit(1);
 
         System.out.println("serverAddr: " + serverAddress + "; votesPath: " + filename);
+
+        service = (VotingService) getRemoteService("voting-service");
 
         parseCsv();
 

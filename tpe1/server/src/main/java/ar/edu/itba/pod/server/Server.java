@@ -15,12 +15,16 @@ public class Server {
 
     public static void main(String[] args) {
         logger.info("tpe1 Server Starting ...");
+        System.setProperty("java.rmi.server.hostname", "10.17.32.245");
 
         try {
             final Servant servant = new Servant();
             final Remote remote = UnicastRemoteObject.exportObject(servant, 0);
             final Registry registry = LocateRegistry.getRegistry();
-            registry.rebind("service", remote);
+            registry.rebind("admin-service", remote);
+            registry.rebind("monitor-service", remote);
+            registry.rebind("query-service", remote);
+            registry.rebind("voting-service", remote);
             System.out.println("Service bound");
         } catch(RemoteException e) {
             System.err.println("Error instantiating servant.");

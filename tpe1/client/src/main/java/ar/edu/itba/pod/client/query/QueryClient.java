@@ -2,22 +2,26 @@ package ar.edu.itba.pod.client.query;
 
 import ar.edu.itba.pod.client.Client;
 import ar.edu.itba.pod.interfaces.State;
+import ar.edu.itba.pod.interfaces.services.QueryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class QueryClient extends Client {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryClient.class);
+    private static QueryService service;
     private static State state;
     private static Integer pollingPlaceNumber;
     private static String filename;
     private static boolean parsedPollingPlaceNumber = false;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         LOGGER.info("tpe1 QueryClient Starting ...");
         if(!parseArguments())
             System.exit(1);
         System.out.println("servAdd: " + serverAddress + "; state: " + state +
                 "; id: " + pollingPlaceNumber + "; filename: " + filename);
+
+        service = (QueryService) getRemoteService("query-service");
     }
 
     private static boolean parseArguments() {
