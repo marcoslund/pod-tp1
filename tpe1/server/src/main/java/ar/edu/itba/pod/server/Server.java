@@ -15,7 +15,7 @@ public class Server {
 
     public static void main(String[] args) {
         logger.info("tpe1 Server Starting ...");
-        System.setProperty("java.rmi.server.hostname", "10.17.32.245");
+        System.setProperty("java.rmi.server.hostname", "127.0.0.1");
 
         try {
             final Servant servant = new Servant();

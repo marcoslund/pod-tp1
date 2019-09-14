@@ -2,7 +2,7 @@ package ar.edu.itba.pod.interfaces;
 
 public enum ElectionState {
 
-    STARTED,
+    NOT_STARTED,
     IN_PROGRESS,
     FINISHED
 

@@ -1,6 +1,7 @@
 package ar.edu.itba.pod.client.voting;
 
 import ar.edu.itba.pod.client.Client;
+import ar.edu.itba.pod.interfaces.exceptions.IllegalElectionStateException;
 import ar.edu.itba.pod.interfaces.models.Vote;
 import ar.edu.itba.pod.interfaces.services.VotingService;
 import org.slf4j.Logger;
@@ -8,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.rmi.RemoteException;
 import java.util.List;
 
 public class VotingClient extends Client {
@@ -15,6 +17,8 @@ public class VotingClient extends Client {
     private static VotingService service;
     private static String filename;
     private static List<Vote> votes;
+
+    private static final String INVALID_STATE_ERROR = "The election is not active. Could not vote.";
 
     public static void main(String[] args) throws Exception {
         LOGGER.info("tpe1 VotingClient Starting ...");
@@ -24,10 +28,8 @@ public class VotingClient extends Client {
         System.out.println("serverAddr: " + serverAddress + "; votesPath: " + filename);
 
         service = (VotingService) getRemoteService("voting-service");
-
         parseCsv();
-
-        System.out.println(votes);
+        vote();
     }
 
     private static boolean parseArguments() {
@@ -56,6 +58,15 @@ public class VotingClient extends Client {
         } catch(InvalidCsvException e) {
             LOGGER.error("Error reading {} file at line {} (got {})", filename, e.lineNumber, e.line);
             System.exit(1);
+        }
+    }
+
+    private static void vote() throws RemoteException {
+        try {
+            service.vote(votes);
+            LOGGER.info("{} votes registered.", votes.size());
+        } catch(IllegalElectionStateException e) {
+            LOGGER.error(INVALID_STATE_ERROR);
         }
     }
 }

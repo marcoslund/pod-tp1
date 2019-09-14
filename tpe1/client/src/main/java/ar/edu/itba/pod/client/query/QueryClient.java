@@ -2,9 +2,17 @@ package ar.edu.itba.pod.client.query;
 
 import ar.edu.itba.pod.client.Client;
 import ar.edu.itba.pod.interfaces.State;
+import ar.edu.itba.pod.interfaces.exceptions.IllegalElectionStateException;
+import ar.edu.itba.pod.interfaces.models.QueryResult;
 import ar.edu.itba.pod.interfaces.services.QueryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.rmi.RemoteException;
+import java.util.SortedSet;
 
 public class QueryClient extends Client {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryClient.class);
@@ -13,6 +21,10 @@ public class QueryClient extends Client {
     private static Integer pollingPlaceNumber;
     private static String filename;
     private static boolean parsedPollingPlaceNumber = false;
+    private static SortedSet<QueryResult> votes;
+
+    private static final String INVALID_STATE_ERROR = "The election is not active. Could not query votes.";
+    private static final String FILE_COLUMN_MAPPING = "Porcentaje;Partido\n";
 
     public static void main(String[] args) throws Exception {
         LOGGER.info("tpe1 QueryClient Starting ...");
@@ -22,6 +34,8 @@ public class QueryClient extends Client {
                 "; id: " + pollingPlaceNumber + "; filename: " + filename);
 
         service = (QueryService) getRemoteService("query-service");
+
+
     }
 
     private static boolean parseArguments() {
@@ -67,5 +81,50 @@ public class QueryClient extends Client {
             return false;
         }
         return true;
+    }
+
+    private static boolean isNationalQuery() {
+        return state == null && pollingPlaceNumber == null;
+    }
+
+    private static boolean isStateQuery() {
+        return state != null && pollingPlaceNumber == null;
+    }
+
+    private static void queryElection() throws RemoteException {
+        try {
+            if(isNationalQuery()) {
+                votes = service.queryNationResults();
+            } else if(isStateQuery()) {
+                votes = service.queryStateResults(state);
+            } else {
+                votes = service.queryTableResults(pollingPlaceNumber);
+            }
+
+            writeVotesToCsv();
+        } catch(IllegalElectionStateException e) {
+            LOGGER.error("{}", INVALID_STATE_ERROR);
+        }
+    }
+
+    private static void writeVotesToCsv() {
+        File file = new File(filename);
+        try(FileWriter fw = new FileWriter(file)) {
+            file.createNewFile();
+            fw.write(FILE_COLUMN_MAPPING);
+            for(QueryResult result : votes) {
+                writeResultToFile(fw, result);
+            }
+        } catch(IOException e) {
+            LOGGER.error("Could not write to file.");
+            e.printStackTrace();
+            System.exit(1);
+        }
+    }
+
+    private static void writeResultToFile(final FileWriter fw, final QueryResult result)
+        throws IOException {
+        fw.write(String.format("%.02g", result.getPercentage())
+                + "%;" + result.getPoliticalParty() + "\n");
     }
 }

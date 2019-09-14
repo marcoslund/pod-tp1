@@ -1,11 +1,14 @@
 package ar.edu.itba.pod.client.administration;
 
 import ar.edu.itba.pod.client.Client;
+import ar.edu.itba.pod.interfaces.ElectionState;
+import ar.edu.itba.pod.interfaces.exceptions.IllegalElectionStateException;
 import ar.edu.itba.pod.interfaces.services.AdministrationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.rmi.Naming;
+import java.rmi.RemoteException;
 
 public class AdministrationClient extends Client {
 
@@ -20,6 +23,8 @@ public class AdministrationClient extends Client {
         System.out.println("serverAddr: " + serverAddress + "; action: " + action);
 
         service = (AdministrationService) getRemoteService("admin-service");
+
+        callServiceMethod();
     }
 
     private static boolean parseArguments() {
@@ -40,5 +45,25 @@ public class AdministrationClient extends Client {
             return false;
         }
         return true;
+    }
+
+    private static void callServiceMethod() throws RemoteException {
+        try {
+            switch (action) {
+                case OPEN:
+                    service.startElection();
+                    break;
+                case CLOSE:
+                    service.endElection();
+                    break;
+                case STATE:
+                    ElectionState es = service.queryElection();
+                    LOGGER.info("The election is {}", es);
+                    break;
+            }
+        } catch (IllegalElectionStateException e) {
+            ElectionState state = service.queryElection();
+            LOGGER.error("Could not execute operation: {}. The election is currently {}", action, state);
+        }
     }
 }

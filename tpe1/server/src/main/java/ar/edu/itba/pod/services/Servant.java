@@ -13,9 +13,14 @@ import ar.edu.itba.pod.interfaces.services.VotingService;
 
 import java.rmi.RemoteException;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Servant
         implements AdministrationService, MonitoringService, QueryService, VotingService {
+
+    private static AtomicBoolean electionStarted = new AtomicBoolean(false);
+    private static AtomicBoolean electionFinished = new AtomicBoolean(false);
 
     public Servant() throws RemoteException {
 
@@ -23,17 +28,29 @@ public class Servant
 
     @Override
     public void startElection() throws RemoteException, IllegalElectionStateException {
-
+        if(!electionStarted.compareAndSet(false, true)) {
+            throw new IllegalElectionStateException("Election already active.");
+        }
     }
 
     @Override
-    public void endElection() throws RemoteException, IllegalElectionStateException {
-
+    public synchronized void endElection() throws RemoteException, IllegalElectionStateException {
+        if(electionStarted.get() && !electionFinished.get())
+            electionFinished.set(true);
+        else {
+            throw new IllegalElectionStateException("Election not active.");
+        }
     }
 
     @Override
     public ElectionState queryElection() throws RemoteException {
-        return null;
+        if(!electionStarted.get())
+            return ElectionState.NOT_STARTED;
+        else if(electionFinished.get()) {
+            return ElectionState.FINISHED;
+        } else {
+            return ElectionState.IN_PROGRESS;
+        }
     }
 
     @Override
@@ -43,19 +60,19 @@ public class Servant
     }
 
     @Override
-    public List<QueryResult> queryNationResults()
+    public SortedSet<QueryResult> queryNationResults()
             throws RemoteException, IllegalElectionStateException {
         return null;
     }
 
     @Override
-    public List<QueryResult> queryStateResults(final State state)
+    public SortedSet<QueryResult> queryStateResults(final State state)
             throws RemoteException, IllegalElectionStateException {
         return null;
     }
 
     @Override
-    public List<QueryResult> queryTableResults(final long tableNumber)
+    public SortedSet<QueryResult> queryTableResults(final long tableNumber)
             throws RemoteException, IllegalElectionStateException {
         return null;
     }
