@@ -19,8 +19,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Servant
         implements AdministrationService, MonitoringService, QueryService, VotingService {
 
-    private static AtomicBoolean electionStarted = new AtomicBoolean(false);
-    private static AtomicBoolean electionFinished = new AtomicBoolean(false);
+    private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
+    private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
 
     public Servant() throws RemoteException {
 
