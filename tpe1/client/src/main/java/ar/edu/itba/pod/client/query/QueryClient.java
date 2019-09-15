@@ -58,7 +58,7 @@ public class QueryClient extends Client {
         try {
             state = State.valueOf(stateName.toUpperCase());
         } catch(NullPointerException | IllegalArgumentException e) {
-            LOGGER.error("State is invalid. Must be in {} (was {}).", State.values(), stateName);
+            //LOGGER.error("State is invalid. Must be in {} (was {}).", State.values(), stateName);
             return false;
         }
         return true;

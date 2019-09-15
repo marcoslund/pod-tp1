@@ -92,18 +92,18 @@ public class Servant
                 .map(x -> x.get(tableNumber))
                 .filter(Objects::nonNull)
                 .findFirst().orElseThrow(PollingPlaceNotFoundException::new);
-
+        System.out.println(tableVotes);
         // Calculate percentage of every party's votes
         Map<PoliticalParty, Double> percentages = tableVotes.stream()
                 .collect(Collectors.groupingBy(
                             Vote::getMainChoice,
                         Collectors.averagingDouble(x -> 1)));
-
+        System.out.println(percentages);
         // Add QueryResults to sorted set
         percentages.entrySet().stream()
-                .map(x -> new QueryResult(x.getKey(), x.getValue()))
+                .map(x -> new QueryResult(x.getKey(), x.getValue() * 100))
                 .forEach(results::add);
-
+        System.out.println(results);
         return results;
     }
 
