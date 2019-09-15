@@ -23,12 +23,12 @@ public class Servant
 
     private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
-    private static Map<State, Map<Long, Vector<Vote>>> stateVotes;
+    private static Map<State, Map<Long, List<Vote>>> stateVotes;
 
     public Servant() throws RemoteException {
         stateVotes = new HashMap<>();
         for(State state : State.values()) {
-            stateVotes.put(state, new ConcurrentHashMap<>());
+            stateVotes.put(state, new HashMap<>());
         }
     }
 
@@ -72,6 +72,7 @@ public class Servant
     @Override
     public SortedSet<QueryResult> queryNationResults()
             throws RemoteException, IllegalElectionStateException {
+
         return null;
     }
 
@@ -88,7 +89,7 @@ public class Servant
         SortedSet<QueryResult> results = new TreeSet<>();
 
         // Find the table among all state tables
-        Vector<Vote> tableVotes = stateVotes.values().stream()
+        List<Vote> tableVotes = stateVotes.values().stream()
                 .map(x -> x.get(tableNumber))
                 .filter(Objects::nonNull)
                 .findFirst().orElseThrow(PollingPlaceNotFoundException::new);
@@ -117,7 +118,7 @@ public class Servant
 
         for(Vote vote : votes) {
             stateVotes.get(vote.getState())
-                    .putIfAbsent(vote.getPollingPlaceNumber(), new Vector<>());
+                    .putIfAbsent(vote.getPollingPlaceNumber(), new ArrayList<>());
             stateVotes.get(vote.getState())
                     .get(vote.getPollingPlaceNumber())
                     .add(vote);
