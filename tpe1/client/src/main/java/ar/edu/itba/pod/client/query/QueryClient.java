@@ -3,6 +3,7 @@ package ar.edu.itba.pod.client.query;
 import ar.edu.itba.pod.client.Client;
 import ar.edu.itba.pod.interfaces.State;
 import ar.edu.itba.pod.interfaces.exceptions.IllegalElectionStateException;
+import ar.edu.itba.pod.interfaces.exceptions.PollingPlaceNotFoundException;
 import ar.edu.itba.pod.interfaces.models.QueryResult;
 import ar.edu.itba.pod.interfaces.services.QueryService;
 import org.slf4j.Logger;
@@ -24,6 +25,7 @@ public class QueryClient extends Client {
     private static SortedSet<QueryResult> votes;
 
     private static final String INVALID_STATE_ERROR = "The election is not active. Could not query votes.";
+    private static final String POLLING_PLACE_ERROR = "Polling place number does not exist.";
     private static final String FILE_COLUMN_MAPPING = "Porcentaje;Partido\n";
 
     public static void main(String[] args) throws Exception {
@@ -35,7 +37,7 @@ public class QueryClient extends Client {
 
         service = (QueryService) getRemoteService("query-service");
 
-
+        queryElection();
     }
 
     private static boolean parseArguments() {
@@ -56,7 +58,7 @@ public class QueryClient extends Client {
         try {
             state = State.valueOf(stateName.toUpperCase());
         } catch(NullPointerException | IllegalArgumentException e) {
-            LOGGER.error("State is invalid. Must be in {} (was {})", State.values(), stateName);
+            LOGGER.error("State is invalid. Must be in {} (was {}).", State.values(), stateName);
             return false;
         }
         return true;
@@ -68,7 +70,7 @@ public class QueryClient extends Client {
             parsedPollingPlaceNumber = true;
         pollingPlaceNumber = stringToInt(number);
         if(pollingPlaceNumber == null) {
-            LOGGER.error("Polling number (id) must be an integer (was {})", number);
+            LOGGER.error("Polling number (id) must be an integer (was {}).", number);
             return false;
         }
         return true;
@@ -104,6 +106,8 @@ public class QueryClient extends Client {
             writeVotesToCsv();
         } catch(IllegalElectionStateException e) {
             LOGGER.error("{}", INVALID_STATE_ERROR);
+        } catch(PollingPlaceNotFoundException e) {
+            LOGGER.error("{}", POLLING_PLACE_ERROR);
         }
     }
 

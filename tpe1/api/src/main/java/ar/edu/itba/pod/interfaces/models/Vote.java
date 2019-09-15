@@ -10,17 +10,17 @@ import java.util.Optional;
 public class Vote {
 
     public static final int PARTY_COUNT = 3;
-    private final int pollingPlaceNumber;
+    private final long pollingPlaceNumber;
     private final State state;
     private final List<PoliticalParty> parties = new ArrayList<>(PARTY_COUNT);
 
-    public Vote(final int pollingPlaceNumber, final State state, final PoliticalParty mainChoice) {
+    public Vote(final long pollingPlaceNumber, final State state, final PoliticalParty mainChoice) {
         this.pollingPlaceNumber = pollingPlaceNumber;
         this.state = state;
         parties.add(mainChoice);
     }
 
-    public Vote(final int pollingPlaceNumber, final State state, final PoliticalParty[] parties) {
+    public Vote(final long pollingPlaceNumber, final State state, final PoliticalParty[] parties) {
         this.pollingPlaceNumber = pollingPlaceNumber;
         this.state = state;
         if(parties.length < 1)
@@ -30,7 +30,7 @@ public class Vote {
         }
     }
 
-    public Vote(final int pollingPlaceNumber, final State state, final List<PoliticalParty> parties) {
+    public Vote(final long pollingPlaceNumber, final State state, final List<PoliticalParty> parties) {
         this.pollingPlaceNumber = pollingPlaceNumber;
         this.state = state;
         if(parties.size() < 1)
@@ -49,7 +49,7 @@ public class Vote {
                 "; Third vote: " + getThirdChoice().orElse(null);
     }
 
-    public int getPollingPlaceNumber() {
+    public long getPollingPlaceNumber() {
         return pollingPlaceNumber;
     }
 

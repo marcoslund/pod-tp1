@@ -1,4 +1,4 @@
 package ar.edu.itba.pod.interfaces.exceptions;
 
-public class PollingPlaceNotFoundException {
+public class PollingPlaceNotFoundException extends Exception {
 }

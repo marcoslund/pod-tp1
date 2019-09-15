@@ -2,6 +2,7 @@ package ar.edu.itba.pod.interfaces.services;
 
 import ar.edu.itba.pod.interfaces.State;
 import ar.edu.itba.pod.interfaces.exceptions.IllegalElectionStateException;
+import ar.edu.itba.pod.interfaces.exceptions.PollingPlaceNotFoundException;
 import ar.edu.itba.pod.interfaces.models.QueryResult;
 
 import java.rmi.Remote;
@@ -17,6 +18,7 @@ public interface QueryService extends Remote {
             throws RemoteException, IllegalElectionStateException;
 
     SortedSet<QueryResult> queryTableResults(long tableNumber)
-            throws RemoteException, IllegalElectionStateException;
+            throws RemoteException, IllegalElectionStateException,
+                PollingPlaceNotFoundException;
 
 }
