@@ -3,11 +3,12 @@ package ar.edu.itba.pod.interfaces.models;
 import ar.edu.itba.pod.interfaces.PoliticalParty;
 import ar.edu.itba.pod.interfaces.State;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class Vote {
+public class Vote implements Serializable {
 
     public static final int PARTY_COUNT = 3;
     private final long pollingPlaceNumber;

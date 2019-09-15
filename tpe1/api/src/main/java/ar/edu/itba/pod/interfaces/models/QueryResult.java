@@ -2,7 +2,9 @@ package ar.edu.itba.pod.interfaces.models;
 
 import ar.edu.itba.pod.interfaces.PoliticalParty;
 
-public class QueryResult implements Comparable<QueryResult> {
+import java.io.Serializable;
+
+public class QueryResult implements Comparable<QueryResult>, Serializable {
 
     private final PoliticalParty politicalParty;
     private final double percentage;
