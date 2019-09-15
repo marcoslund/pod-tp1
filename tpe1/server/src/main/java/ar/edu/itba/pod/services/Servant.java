@@ -92,18 +92,24 @@ public class Servant
                 .map(x -> x.get(tableNumber))
                 .filter(Objects::nonNull)
                 .findFirst().orElseThrow(PollingPlaceNotFoundException::new);
-        System.out.println(tableVotes);
-        // Calculate percentage of every party's votes
-        Map<PoliticalParty, Double> percentages = tableVotes.stream()
+
+        // Calculate amount of votes by parties
+        Map<PoliticalParty, Long> voteQtyByParty = tableVotes.stream()
                 .collect(Collectors.groupingBy(
-                            Vote::getMainChoice,
-                        Collectors.averagingDouble(x -> 1)));
-        System.out.println(percentages);
+                            Vote::getMainChoice, Collectors.counting()));
+
+        // Calculate percentage of every party's votes
+        Map<PoliticalParty, Double> percentages = voteQtyByParty
+                .entrySet().stream().collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    e -> (e.getValue().doubleValue() / voteQtyByParty.values().stream().mapToLong(Long::longValue).sum())
+        ));
+
         // Add QueryResults to sorted set
         percentages.entrySet().stream()
                 .map(x -> new QueryResult(x.getKey(), x.getValue() * 100))
                 .forEach(results::add);
-        System.out.println(results);
+
         return results;
     }
 
