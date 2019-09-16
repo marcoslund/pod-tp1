@@ -8,7 +8,7 @@ import java.util.Objects;
 public class QueryResult implements Comparable<QueryResult>, Serializable {
 
     private final PoliticalParty politicalParty;
-    private final double percentage;
+    private double percentage;
 
     public QueryResult(final PoliticalParty politicalParty, final double percentage) {
         this.politicalParty = politicalParty;
@@ -52,5 +52,9 @@ public class QueryResult implements Comparable<QueryResult>, Serializable {
 
     public double getPercentage() {
         return percentage;
+    }
+
+    public void setPercentage(double percentage) {
+        this.percentage = percentage;
     }
 }

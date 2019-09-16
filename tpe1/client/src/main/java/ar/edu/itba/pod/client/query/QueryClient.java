@@ -22,6 +22,7 @@ public class QueryClient extends Client {
     private static Integer pollingPlaceNumber;
     private static String filename;
     private static boolean parsedPollingPlaceNumber = false;
+    private static boolean parsedState = false;
     private static SortedSet<QueryResult> votes;
 
     private static final String INVALID_STATE_ERROR = "The election is not active. Could not query votes.";
@@ -41,26 +42,35 @@ public class QueryClient extends Client {
     }
 
     private static boolean parseArguments() {
-        boolean success;
-        success = parseServerAddress(LOGGER);
-        success &= (parseState() ^ parsePollingNumber());
-        success &= parseFilename();
-        if(!success) {
-            if (state != null && parsedPollingPlaceNumber) {
-                LOGGER.error("Either the state or the pollingPlaceNumber (id) must be passed.");
-            }
+        if(!parseServerAddress(LOGGER) || !parseFilename()) {
+            return false;
         }
-        return success;
+        boolean parseStateSuccess = parseState();
+        boolean parsePollingNumberSuccess = parsePollingNumber();
+        if (parsedState && parsedPollingPlaceNumber) {
+            LOGGER.error("Either the state or the pollingPlaceNumber (id) must be passed.");
+            return false;
+        } else if(!parsedState && !parsedPollingPlaceNumber) {
+            return true;
+        } else if((parsedState && !parseStateSuccess)
+                || (parsedPollingPlaceNumber && !parsePollingNumberSuccess)) {
+            return false;
+        }
+        return true;
     }
 
     private static boolean parseState() {
         String stateName = System.getProperty("state");
         try {
             state = State.valueOf(stateName.toUpperCase());
-        } catch(NullPointerException | IllegalArgumentException e) {
-            //LOGGER.error("State is invalid. Must be in {} (was {}).", State.values(), stateName);
+        } catch(NullPointerException e) {
+            return false;
+        } catch(IllegalArgumentException e) {
+            LOGGER.error("State is invalid. Must be in {} (was {}).", State.values(), stateName);
+            parsedState = true;
             return false;
         }
+        parsedState = true;
         return true;
     }
 
@@ -86,20 +96,23 @@ public class QueryClient extends Client {
     }
 
     private static boolean isNationalQuery() {
-        return state == null && pollingPlaceNumber == null;
+        return !parsedState && !parsedPollingPlaceNumber;
     }
 
     private static boolean isStateQuery() {
-        return state != null && pollingPlaceNumber == null;
+        return parsedState && !parsedPollingPlaceNumber;
     }
 
     private static void queryElection() throws RemoteException {
         try {
             if(isNationalQuery()) {
+                LOGGER.debug("Running national query...");
                 votes = service.queryNationResults();
             } else if(isStateQuery()) {
+                LOGGER.debug("Running state query...");
                 votes = service.queryStateResults(state);
             } else {
+                LOGGER.debug("Running table query...");
                 votes = service.queryTableResults(pollingPlaceNumber);
             }
 

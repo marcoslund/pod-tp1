@@ -81,4 +81,16 @@ public class Vote implements Serializable {
         }
         return pp;
     }
+
+    public Optional<PoliticalParty> getChoice(int choiceNumber) {
+        if(choiceNumber < 1 || choiceNumber > PARTY_COUNT)
+            throw new IllegalArgumentException("Choice number must be between 1 and 3.");
+        Optional<PoliticalParty> pp;
+        try {
+            pp = Optional.of(parties.get(choiceNumber - 1));
+        } catch(IndexOutOfBoundsException e) {
+            return Optional.empty();
+        }
+        return pp;
+    }
 }
