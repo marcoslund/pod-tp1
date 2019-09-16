@@ -23,10 +23,9 @@ public class Servant
 
     private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
-    private static Map<State, Map<Long, List<Vote>>> stateVotes;
+    private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
 
     public Servant() throws RemoteException {
-        stateVotes = new HashMap<>();
         for(State state : State.values()) {
             stateVotes.put(state, new HashMap<>());
         }
@@ -94,16 +93,21 @@ public class Servant
                 .filter(Objects::nonNull)
                 .findFirst().orElseThrow(PollingPlaceNotFoundException::new);
 
-        // Calculate amount of votes by parties
-        Map<PoliticalParty, Long> voteQtyByParty = tableVotes.stream()
-                .collect(Collectors.groupingBy(
+        Map<PoliticalParty, Long> voteQtyByParty;
+        int voteCount;
+        synchronized (stateVotes) {
+            // Calculate amount of votes by parties
+            voteQtyByParty = tableVotes.stream()
+                    .collect(Collectors.groupingBy(
                             Vote::getMainChoice, Collectors.counting()));
+             voteCount = tableVotes.size();
+        }
 
         // Calculate percentage of every party's votes
         Map<PoliticalParty, Double> percentages = voteQtyByParty
                 .entrySet().stream().collect(Collectors.toMap(
                     Map.Entry::getKey,
-                    e -> (e.getValue().doubleValue() / voteQtyByParty.values().stream().mapToLong(Long::longValue).sum())
+                    e -> (e.getValue().doubleValue() / voteCount)
         ));
 
         // Add QueryResults to sorted set
@@ -122,12 +126,14 @@ public class Servant
             throw new IllegalElectionStateException("Election not active.");
         }
 
-        for(Vote vote : votes) {
-            stateVotes.get(vote.getState())
-                    .putIfAbsent(vote.getPollingPlaceNumber(), new ArrayList<>());
-            stateVotes.get(vote.getState())
-                    .get(vote.getPollingPlaceNumber())
-                    .add(vote);
+        synchronized (stateVotes) {
+            for (Vote vote : votes) {
+                stateVotes.get(vote.getState())
+                        .putIfAbsent(vote.getPollingPlaceNumber(), new ArrayList<>());
+                stateVotes.get(vote.getState())
+                        .get(vote.getPollingPlaceNumber())
+                        .add(vote);
+            }
         }
 
     }
