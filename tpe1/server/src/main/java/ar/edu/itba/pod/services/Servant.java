@@ -71,12 +71,16 @@ public class Servant
     @Override
     public SortedSet<QueryResult> queryNationResults()
             throws RemoteException, IllegalElectionStateException {
+
+        if(!electionStartedAndNotFinished()) {
+            throw new IllegalElectionStateException("Election not active.");
+        }
         SortedSet<QueryResult> results = new TreeSet<>();
 
         int voteQty;
         Map<PoliticalParty, List<Vote>> votes;
         synchronized (stateVotes) {
-             votes = stateVotes.values().parallelStream()
+             votes = stateVotes.values().stream()
                     .map(Map::values)
                     .flatMap(Collection::parallelStream)
                     .flatMap(List::parallelStream)
@@ -88,19 +92,20 @@ public class Servant
                 new QueryResult(k, v.size() * 100 / (double) voteQty)));
 
         boolean foundWinner = Double.compare(results.first().getPercentage(), 50) >= 0;
-        int n = 2;
-        while(n <= Vote.PARTY_COUNT && !foundWinner) {
-            System.out.println("CYCLE " + n + ": " + results);
-            final int aux = n;
-            for(int i = 0; i < votes.get(results.last().getPoliticalParty()).size(); i++) {
-                Vote vote = votes.get(results.last().getPoliticalParty()).get(i);
-                System.out.println("Vote: " + vote);
-                vote.getChoice(aux).ifPresent(x -> {
-                    if(!votes.containsKey(x))
-                        votes.put(x, new ArrayList<>());
-                    votes.get(x).add(vote);
-                });
-            }
+        int rankCycle = 2;
+        while(rankCycle <= Vote.PARTY_COUNT && !foundWinner) {
+            final int currentVoteRank = rankCycle;
+
+            votes.get(results.last().getPoliticalParty()).forEach(
+                v -> {
+                    v.getChoice(currentVoteRank).ifPresent(x -> {
+                        if(!votes.containsKey(x))
+                            votes.put(x, new ArrayList<>());
+                        votes.get(x).add(v);
+                    });
+                }
+            );
+
             votes.remove(results.last().getPoliticalParty());
             results.remove(results.last());
 
@@ -108,7 +113,7 @@ public class Servant
                     votes.get(r.getPoliticalParty()).size() * 100 / (double) voteQty
             ));
             foundWinner = Double.compare(results.first().getPercentage(), 50) >= 0;
-            n++;
+            rankCycle++;
         }
         return results;
     }
@@ -116,6 +121,10 @@ public class Servant
     @Override
     public SortedSet<QueryResult> queryStateResults(final State state)
             throws RemoteException, IllegalElectionStateException {
+
+        if(!electionStartedAndNotFinished()) {
+            throw new IllegalElectionStateException("Election not active.");
+        }
         return null;
     }
 
@@ -123,6 +132,11 @@ public class Servant
     public SortedSet<QueryResult> queryTableResults(final long tableNumber)
             throws RemoteException, IllegalElectionStateException,
                 PollingPlaceNotFoundException {
+
+        if(!electionStartedAndNotFinished()) {
+            throw new IllegalElectionStateException("Election not active.");
+        }
+
         SortedSet<QueryResult> results = new TreeSet<>();
 
         // Find the table among all state tables
