@@ -18,7 +18,7 @@ public class QueryResult implements Comparable<QueryResult>, Serializable {
     @Override
     public String toString() {
         return "Party: " + politicalParty + "; "
-                + String.format("%.2g", percentage) + "%";
+                + String.format("%g", percentage) + "%";
     }
 
     @Override

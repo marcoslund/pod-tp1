@@ -25,6 +25,8 @@ public class Servant
     private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
     private static int voteCount = 0;
 
+    private static final boolean HAS_BEEN_REPROCESSED = true;
+
     public Servant() throws RemoteException {
         for(State state : State.values()) {
             stateVotes.put(state, new HashMap<>());
@@ -75,10 +77,13 @@ public class Servant
         if(!electionStartedAndNotFinished()) {
             throw new IllegalElectionStateException("Election not active.");
         }
-        SortedSet<QueryResult> results = new TreeSet<>();
 
-        int voteQty;
-        Map<PoliticalParty, List<Vote>> votes;
+        SortedSet<QueryResult> results = new TreeSet<>();
+        final SortedSet<QueryResult> auxResults = results;
+        final int voteQty;
+        final Map<PoliticalParty, List<Vote>> votes;
+        final Map<Vote, Integer> currentVotesRank = new HashMap<>();
+
         synchronized (stateVotes) {
              votes = stateVotes.values().stream()
                     .map(Map::values)
@@ -88,34 +93,73 @@ public class Servant
             voteQty = voteCount;
         }
 
-        votes.forEach((k, v) -> results.add(
-                new QueryResult(k, v.size() * 100 / (double) voteQty)));
+        votes.forEach((k, votesList) -> {
+            auxResults.add(
+                    new QueryResult(k, votesList.size() * 100 / (double) voteQty));
+            votesList.forEach(vote -> currentVotesRank.put(vote, 1));
+        });
 
-        boolean foundWinner = Double.compare(results.first().getPercentage(), 50) >= 0;
-        int rankCycle = 2;
-        while(rankCycle <= Vote.PARTY_COUNT && !foundWinner) {
-            final int currentVoteRank = rankCycle;
+        while(!foundWinner(results)) {
 
-            votes.get(results.last().getPoliticalParty()).forEach(
+            // Reprocess all the least popular candidate's votes
+            votes.get(getLeastPopularCandidate(results)).forEach(
                 v -> {
-                    v.getChoice(currentVoteRank).ifPresent(x -> {
-                        if(!votes.containsKey(x))
-                            votes.put(x, new ArrayList<>());
-                        votes.get(x).add(v);
-                    });
+                    while(!reprocessVote(v, votes, currentVotesRank));
                 }
             );
-
-            votes.remove(results.last().getPoliticalParty());
+            votes.remove(getLeastPopularCandidate(results));
             results.remove(results.last());
 
-            results.forEach(r -> r.setPercentage(
-                    votes.get(r.getPoliticalParty()).size() * 100 / (double) voteQty
-            ));
-            foundWinner = Double.compare(results.first().getPercentage(), 50) >= 0;
-            rankCycle++;
+            // Update percentages based on new vote distribution
+            results = updateResults(results, votes, getRemainingVoteQty(currentVotesRank));
         }
         return results;
+    }
+
+    private boolean foundWinner(final SortedSet<QueryResult> results) {
+        return Double.compare(results.first().getPercentage(), 50) >= 0;
+    }
+
+    private int getRemainingVoteQty(Map<Vote, Integer> currentVotesRank) {
+        return currentVotesRank.size();
+    }
+
+    private SortedSet<QueryResult> updateResults(final SortedSet<QueryResult> results,
+                                                 final Map<PoliticalParty, List<Vote>> votes,
+                                                 final int voteCount) {
+        SortedSet<QueryResult> tmp = new TreeSet<>();
+        results.forEach(result -> tmp.add(new QueryResult(
+                result.getPoliticalParty(),
+                votes.get(result.getPoliticalParty()).size() * 100
+                        / (double) voteCount)
+        ));
+        return tmp;
+    }
+
+    private PoliticalParty getLeastPopularCandidate(SortedSet<QueryResult> results) {
+        return results.last().getPoliticalParty();
+    }
+
+    private boolean reprocessVote(final Vote v,
+                                  final Map<PoliticalParty, List<Vote>> votes,
+                                  final Map<Vote, Integer> currentVotesRank) {
+        currentVotesRank.put(v, currentVotesRank.get(v) + 1);
+        if(currentVotesRank.get(v) > Vote.PARTY_COUNT) {
+            currentVotesRank.remove(v);
+            return HAS_BEEN_REPROCESSED; // All choices have been used
+        } else {
+            Optional<PoliticalParty> nextChoice = v.getChoice(currentVotesRank.get(v));
+            if(nextChoice.isPresent()) {
+                if(votes.containsKey(nextChoice.get())) {
+                    votes.get(nextChoice.get()).add(v);
+                    return HAS_BEEN_REPROCESSED; // Valid next choice has been used
+                } else
+                    return !HAS_BEEN_REPROCESSED; // Next candidate has been eliminated
+            } else {
+                currentVotesRank.remove(v);
+                return HAS_BEEN_REPROCESSED; // Empty next choice (no more choices left)
+            }
+        }
     }
 
     @Override

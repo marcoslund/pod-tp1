@@ -141,7 +141,7 @@ public class QueryClient extends Client {
 
     private static void writeResultToFile(final FileWriter fw, final QueryResult result)
         throws IOException {
-        fw.write(String.format("%.02g", result.getPercentage())
+        fw.write(String.format("%g", result.getPercentage())
                 + "%;" + result.getPoliticalParty() + "\n");
     }
 }
