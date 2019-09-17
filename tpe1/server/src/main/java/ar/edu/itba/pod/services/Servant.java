@@ -7,7 +7,6 @@ import ar.edu.itba.pod.interfaces.State;
 import ar.edu.itba.pod.interfaces.exceptions.ConflictException;
 import ar.edu.itba.pod.interfaces.exceptions.IllegalElectionStateException;
 import ar.edu.itba.pod.interfaces.exceptions.PollingPlaceNotFoundException;
-import ar.edu.itba.pod.interfaces.models.Fiscal;
 import ar.edu.itba.pod.interfaces.models.QueryResult;
 import ar.edu.itba.pod.interfaces.models.Vote;
 import ar.edu.itba.pod.interfaces.services.AdministrationService;
