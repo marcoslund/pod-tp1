@@ -71,8 +71,8 @@ public class Servant
     public void registerFiscal(final MonitoringClient monitoringClient, final long tableNumber)
             throws RemoteException, ConflictException, IllegalElectionStateException {
 
-        if(!electionActive()) {
-            throw new IllegalElectionStateException("Election not active.");
+        if(electionStarted.get() || electionFinished.get()) {
+            throw new IllegalElectionStateException("Election started or finished");
         }
 
         Optional<List<MonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(tableNumber));
@@ -223,9 +223,16 @@ public class Servant
                         .get(vote.getPollingPlaceNumber())
                         .add(vote);
                 voteCount++;
+
+                for(MonitoringClient fiscal : fiscalsMap.get(vote.getPollingPlaceNumber()))
+                {
+                    if(vote.getPoliticalParties().contains(fiscal.getPoliticalParty()))
+                    {
+                        fiscal.notifyVote(vote);
+                    }
+                }
             }
         }
-
     }
 
 }

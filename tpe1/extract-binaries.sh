@@ -1,6 +1,6 @@
 #!/bin/bash
 
-mvn clean package
+mvn clean package -e
 cd client/target/
 tar xzf tpe1-client-1.0-SNAPSHOT-bin.tar.gz
 cd tpe1-client-1.0-SNAPSHOT

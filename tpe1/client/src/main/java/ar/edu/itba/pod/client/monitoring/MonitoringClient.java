@@ -2,21 +2,43 @@ package ar.edu.itba.pod.client.monitoring;
 
 import ar.edu.itba.pod.client.Client;
 import ar.edu.itba.pod.interfaces.PoliticalParty;
+import ar.edu.itba.pod.interfaces.models.Vote;
 import ar.edu.itba.pod.interfaces.services.MonitoringService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.Objects;
 
-public class MonitoringClient extends Client implements Serializable {
+public class MonitoringClient extends Client implements Serializable, RemoteMonitoringClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(MonitoringClient.class);
     private static MonitoringService service;
     private static Integer pollingPlaceNumber;
+
     private static PoliticalParty politicalParty;
+
+    public MonitoringClient(PoliticalParty politicalParty) {
+        this.setPoliticalParty(politicalParty);
+
+        try {
+            UnicastRemoteObject.exportObject(this, 0);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
 
     public PoliticalParty getPoliticalParty() {
         return politicalParty;
+    }
+
+    public static void setPoliticalParty(PoliticalParty politicalParty) {
+        MonitoringClient.politicalParty = politicalParty;
+    }
+
+    private static MonitoringClient getInstance(){
+        return new MonitoringClient(politicalParty);
     }
 
     public static void main(String[] args) throws Exception {
@@ -27,6 +49,10 @@ public class MonitoringClient extends Client implements Serializable {
             + "; party: " + politicalParty);
 
         service = (MonitoringService) getRemoteService("monitor-service");
+
+        service.registerFiscal(getInstance(), pollingPlaceNumber);
+
+        while(true);
     }
 
     private static boolean parseArguments() {
@@ -69,5 +95,10 @@ public class MonitoringClient extends Client implements Serializable {
     @Override
     public int hashCode() {
         return politicalParty.hashCode();
+    }
+
+    @Override
+    public void notifyVote(Vote vote) {
+        System.out.println("Vote notified");
     }
 }
