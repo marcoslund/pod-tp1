@@ -4,13 +4,13 @@ import ar.edu.itba.pod.client.Client;
 import ar.edu.itba.pod.interfaces.PoliticalParty;
 import ar.edu.itba.pod.interfaces.models.Vote;
 import ar.edu.itba.pod.interfaces.services.MonitoringService;
+import ar.edu.itba.pod.interfaces.services.RemoteMonitoringClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Objects;
 
 public class MonitoringClient extends Client implements Serializable, RemoteMonitoringClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(MonitoringClient.class);

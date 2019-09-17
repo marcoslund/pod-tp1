@@ -1,6 +1,5 @@
 package ar.edu.itba.pod.services;
 
-import ar.edu.itba.pod.client.monitoring.MonitoringClient;
 import ar.edu.itba.pod.interfaces.ElectionState;
 import ar.edu.itba.pod.interfaces.PoliticalParty;
 import ar.edu.itba.pod.interfaces.State;
@@ -9,10 +8,7 @@ import ar.edu.itba.pod.interfaces.exceptions.IllegalElectionStateException;
 import ar.edu.itba.pod.interfaces.exceptions.PollingPlaceNotFoundException;
 import ar.edu.itba.pod.interfaces.models.QueryResult;
 import ar.edu.itba.pod.interfaces.models.Vote;
-import ar.edu.itba.pod.interfaces.services.AdministrationService;
-import ar.edu.itba.pod.interfaces.services.MonitoringService;
-import ar.edu.itba.pod.interfaces.services.QueryService;
-import ar.edu.itba.pod.interfaces.services.VotingService;
+import ar.edu.itba.pod.interfaces.services.*;
 import ar.edu.itba.pod.services.helpers.NationalQueryHelper;
 
 import java.rmi.RemoteException;
@@ -26,7 +22,7 @@ public class Servant
     private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
     private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
-    private static final Map<Long, List<MonitoringClient>> fiscalsMap = new HashMap<>();
+    private static final Map<Long, List<RemoteMonitoringClient>> fiscalsMap = new HashMap<>();
     private static int voteCount = 0;
 
     public Servant() throws RemoteException {
@@ -67,14 +63,14 @@ public class Servant
     }
 
     @Override
-    public void registerFiscal(final MonitoringClient monitoringClient, final long tableNumber)
+    public void registerFiscal(final RemoteMonitoringClient monitoringClient, final long tableNumber)
             throws RemoteException, ConflictException, IllegalElectionStateException {
 
         if(electionStarted.get() || electionFinished.get()) {
             throw new IllegalElectionStateException("Election started or finished");
         }
 
-        Optional<List<MonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(tableNumber));
+        Optional<List<RemoteMonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(tableNumber));
         if(!fiscals.isPresent()) {
             fiscalsMap.put(tableNumber, new LinkedList<>());
         }
@@ -223,11 +219,13 @@ public class Servant
                         .add(vote);
                 voteCount++;
 
-                for(MonitoringClient fiscal : fiscalsMap.get(vote.getPollingPlaceNumber()))
-                {
-                    if(vote.getPoliticalParties().contains(fiscal.getPoliticalParty()))
-                    {
-                        fiscal.notifyVote(vote);
+                Optional<List<RemoteMonitoringClient>> fiscalsOptional =
+                        Optional.ofNullable(fiscalsMap.get(vote.getPollingPlaceNumber()));
+                if(fiscalsOptional.isPresent()) {
+                    for (RemoteMonitoringClient fiscal : fiscalsOptional.get()) {
+                        if (vote.getPoliticalParties().contains(fiscal.getPoliticalParty())) {
+                            fiscal.notifyVote(vote);
+                        }
                     }
                 }
             }
