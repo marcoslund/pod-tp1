@@ -6,11 +6,18 @@ import ar.edu.itba.pod.interfaces.services.MonitoringService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MonitoringClient extends Client {
+import java.io.Serializable;
+import java.util.Objects;
+
+public class MonitoringClient extends Client implements Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(MonitoringClient.class);
     private static MonitoringService service;
     private static Integer pollingPlaceNumber;
     private static PoliticalParty politicalParty;
+
+    public PoliticalParty getPoliticalParty() {
+        return politicalParty;
+    }
 
     public static void main(String[] args) throws Exception {
         LOGGER.info("tpe1 MonitoringClient Starting ...");
@@ -50,5 +57,17 @@ public class MonitoringClient extends Client {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if(o == null || o.getClass() != this.getClass()) return false;
+        MonitoringClient other = (MonitoringClient) o;
+        return other.getPoliticalParty().equals(politicalParty);
+    }
+
+    @Override
+    public int hashCode() {
+        return politicalParty.hashCode();
     }
 }

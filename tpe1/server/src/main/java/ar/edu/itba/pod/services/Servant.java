@@ -1,10 +1,13 @@
 package ar.edu.itba.pod.services;
 
+import ar.edu.itba.pod.client.monitoring.MonitoringClient;
 import ar.edu.itba.pod.interfaces.ElectionState;
 import ar.edu.itba.pod.interfaces.PoliticalParty;
 import ar.edu.itba.pod.interfaces.State;
+import ar.edu.itba.pod.interfaces.exceptions.ConflictException;
 import ar.edu.itba.pod.interfaces.exceptions.IllegalElectionStateException;
 import ar.edu.itba.pod.interfaces.exceptions.PollingPlaceNotFoundException;
+import ar.edu.itba.pod.interfaces.models.Fiscal;
 import ar.edu.itba.pod.interfaces.models.QueryResult;
 import ar.edu.itba.pod.interfaces.models.Vote;
 import ar.edu.itba.pod.interfaces.services.AdministrationService;
@@ -24,6 +27,7 @@ public class Servant
     private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
     private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
+    private static final Map<Long, List<MonitoringClient>> fiscalsMap = new HashMap<>();
     private static int voteCount = 0;
 
     public Servant() throws RemoteException {
@@ -64,9 +68,22 @@ public class Servant
     }
 
     @Override
-    public void registerFiscal(final PoliticalParty politicalParty, final long tableNumber)
-            throws RemoteException, IllegalElectionStateException {
+    public void registerFiscal(final MonitoringClient monitoringClient, final long tableNumber)
+            throws RemoteException, ConflictException, IllegalElectionStateException {
 
+        if(!electionActive()) {
+            throw new IllegalElectionStateException("Election not active.");
+        }
+
+        Optional<List<MonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(tableNumber));
+        if(!fiscals.isPresent()) {
+            fiscalsMap.put(tableNumber, new LinkedList<>());
+        }
+
+        if(fiscals.get().contains(monitoringClient))
+            throw new ConflictException("There is already a fiscal of the same political party in the table");
+
+        fiscals.get().add(monitoringClient);
     }
 
     @Override
@@ -139,13 +156,13 @@ public class Servant
             voteQty = voteCount;
         }
 
-        while() {
+        /*while() {
             while() {
                 // Repartir
             }
             // Eliminar al peor
-        }
-
+        }*/
+        return null;
     }
 
     @Override
@@ -167,7 +184,6 @@ public class Servant
 
         Map<PoliticalParty, Long> voteQtyByParty;
         int voteCount;
-
         // Calculate amount of votes by parties
         synchronized (stateVotes) {
             voteQtyByParty = tableVotes.parallelStream()
