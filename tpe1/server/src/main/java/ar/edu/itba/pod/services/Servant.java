@@ -11,6 +11,7 @@ import ar.edu.itba.pod.interfaces.services.AdministrationService;
 import ar.edu.itba.pod.interfaces.services.MonitoringService;
 import ar.edu.itba.pod.interfaces.services.QueryService;
 import ar.edu.itba.pod.interfaces.services.VotingService;
+import ar.edu.itba.pod.services.helpers.NationalQueryHelper;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -24,8 +25,6 @@ public class Servant
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
     private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
     private static int voteCount = 0;
-
-    private static final boolean HAS_BEEN_REPROCESSED = true;
 
     public Servant() throws RemoteException {
         for(State state : State.values()) {
@@ -42,14 +41,14 @@ public class Servant
 
     @Override
     public synchronized void endElection() throws RemoteException, IllegalElectionStateException {
-        if(electionStartedAndNotFinished())
+        if(electionActive())
             electionFinished.set(true);
         else {
             throw new IllegalElectionStateException("Election not active.");
         }
     }
 
-    private boolean electionStartedAndNotFinished() {
+    private boolean electionActive() {
         return electionStarted.get() && !electionFinished.get();
     }
 
@@ -74,7 +73,7 @@ public class Servant
     public SortedSet<QueryResult> queryNationResults()
             throws RemoteException, IllegalElectionStateException {
 
-        if(!electionStartedAndNotFinished()) {
+        if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
 
@@ -84,6 +83,7 @@ public class Servant
         final Map<PoliticalParty, List<Vote>> votes;
         final Map<Vote, Integer> currentVotesRank = new HashMap<>();
 
+        // Retrieve and group votes by main choice
         synchronized (stateVotes) {
              votes = stateVotes.values().stream()
                     .map(Map::values)
@@ -93,83 +93,59 @@ public class Servant
             voteQty = voteCount;
         }
 
+        // Initialize query results
         votes.forEach((k, votesList) -> {
             auxResults.add(
                     new QueryResult(k, votesList.size() * 100 / (double) voteQty));
             votesList.forEach(vote -> currentVotesRank.put(vote, 1));
         });
 
-        while(!foundWinner(results)) {
+        while(!NationalQueryHelper.foundWinner(results)) {
 
             // Reprocess all the least popular candidate's votes
-            votes.get(getLeastPopularCandidate(results)).forEach(
+            votes.get(NationalQueryHelper.getLeastPopularCandidate(results)).forEach(
                 v -> {
-                    while(!reprocessVote(v, votes, currentVotesRank));
+                    while(!NationalQueryHelper.reprocessVote(v, votes, currentVotesRank));
                 }
             );
-            votes.remove(getLeastPopularCandidate(results));
+            votes.remove(NationalQueryHelper.getLeastPopularCandidate(results));
             results.remove(results.last());
 
             // Update percentages based on new vote distribution
-            results = updateResults(results, votes, getRemainingVoteQty(currentVotesRank));
+            results = NationalQueryHelper.updateResults(results, votes,
+                    NationalQueryHelper.getRemainingVoteQty(currentVotesRank));
         }
         return results;
-    }
-
-    private boolean foundWinner(final SortedSet<QueryResult> results) {
-        return Double.compare(results.first().getPercentage(), 50) >= 0;
-    }
-
-    private int getRemainingVoteQty(Map<Vote, Integer> currentVotesRank) {
-        return currentVotesRank.size();
-    }
-
-    private SortedSet<QueryResult> updateResults(final SortedSet<QueryResult> results,
-                                                 final Map<PoliticalParty, List<Vote>> votes,
-                                                 final int voteCount) {
-        SortedSet<QueryResult> tmp = new TreeSet<>();
-        results.forEach(result -> tmp.add(new QueryResult(
-                result.getPoliticalParty(),
-                votes.get(result.getPoliticalParty()).size() * 100
-                        / (double) voteCount)
-        ));
-        return tmp;
-    }
-
-    private PoliticalParty getLeastPopularCandidate(SortedSet<QueryResult> results) {
-        return results.last().getPoliticalParty();
-    }
-
-    private boolean reprocessVote(final Vote v,
-                                  final Map<PoliticalParty, List<Vote>> votes,
-                                  final Map<Vote, Integer> currentVotesRank) {
-        currentVotesRank.put(v, currentVotesRank.get(v) + 1);
-        if(currentVotesRank.get(v) > Vote.PARTY_COUNT) {
-            currentVotesRank.remove(v);
-            return HAS_BEEN_REPROCESSED; // All choices have been used
-        } else {
-            Optional<PoliticalParty> nextChoice = v.getChoice(currentVotesRank.get(v));
-            if(nextChoice.isPresent()) {
-                if(votes.containsKey(nextChoice.get())) {
-                    votes.get(nextChoice.get()).add(v);
-                    return HAS_BEEN_REPROCESSED; // Valid next choice has been used
-                } else
-                    return !HAS_BEEN_REPROCESSED; // Next candidate has been eliminated
-            } else {
-                currentVotesRank.remove(v);
-                return HAS_BEEN_REPROCESSED; // Empty next choice (no more choices left)
-            }
-        }
     }
 
     @Override
     public SortedSet<QueryResult> queryStateResults(final State state)
             throws RemoteException, IllegalElectionStateException {
 
-        if(!electionStartedAndNotFinished()) {
+        if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
-        return null;
+
+        SortedSet<QueryResult> results = new TreeSet<>();
+        final int voteQty;
+        final Map<PoliticalParty, List<Vote>> votes;
+        final Map<Vote, Integer> currentVotesRank = new HashMap<>();
+
+        // Retrieve and group votes by main choice
+        synchronized (stateVotes) {
+            votes = stateVotes.get(state).values().stream()
+                    .flatMap(List::parallelStream)
+                    .collect(Collectors.groupingBy(Vote::getMainChoice));
+            voteQty = voteCount;
+        }
+
+        while() {
+            while() {
+                // Repartir
+            }
+            // Eliminar al peor
+        }
+
     }
 
     @Override
@@ -177,7 +153,7 @@ public class Servant
             throws RemoteException, IllegalElectionStateException,
                 PollingPlaceNotFoundException {
 
-        if(!electionStartedAndNotFinished()) {
+        if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
 
@@ -191,8 +167,9 @@ public class Servant
 
         Map<PoliticalParty, Long> voteQtyByParty;
         int voteCount;
+
+        // Calculate amount of votes by parties
         synchronized (stateVotes) {
-            // Calculate amount of votes by parties
             voteQtyByParty = tableVotes.parallelStream()
                     .collect(Collectors.groupingBy(
                             Vote::getMainChoice, Collectors.counting()));
@@ -218,7 +195,7 @@ public class Servant
     public void vote(final List<Vote> votes)
             throws RemoteException, IllegalElectionStateException {
         Objects.requireNonNull(votes);
-        if(!electionStartedAndNotFinished()) {
+        if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
 
