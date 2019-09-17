@@ -12,6 +12,8 @@ import ar.edu.itba.pod.interfaces.services.MonitoringService;
 import ar.edu.itba.pod.interfaces.services.QueryService;
 import ar.edu.itba.pod.interfaces.services.VotingService;
 import ar.edu.itba.pod.services.helpers.NationalQueryHelper;
+import ar.edu.itba.pod.services.helpers.QueryHelper;
+import ar.edu.itba.pod.services.helpers.StateQueryHelper;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -103,17 +105,16 @@ public class Servant
         while(!NationalQueryHelper.foundWinner(results)) {
 
             // Reprocess all the least popular candidate's votes
-            votes.get(NationalQueryHelper.getLeastPopularCandidate(results)).forEach(
+            votes.get(QueryHelper.getLeastPopularCandidate(results)).forEach(
                 v -> {
-                    while(!NationalQueryHelper.reprocessVote(v, votes, currentVotesRank));
+                    while(!QueryHelper.reprocessVote(v, votes, currentVotesRank));
                 }
             );
-            votes.remove(NationalQueryHelper.getLeastPopularCandidate(results));
+            votes.remove(QueryHelper.getLeastPopularCandidate(results));
             results.remove(results.last());
 
             // Update percentages based on new vote distribution
-            results = NationalQueryHelper.updateResults(results, votes,
-                    NationalQueryHelper.getRemainingVoteQty(currentVotesRank));
+            results = NationalQueryHelper.updateResults(results, votes, voteQty);
         }
         return results;
     }
@@ -127,6 +128,7 @@ public class Servant
         }
 
         SortedSet<QueryResult> results = new TreeSet<>();
+        final SortedSet<QueryResult> auxResults = results;
         final int voteQty;
         final Map<PoliticalParty, List<Vote>> votes;
         final Map<Vote, Integer> currentVotesRank = new HashMap<>();
@@ -139,13 +141,33 @@ public class Servant
             voteQty = voteCount;
         }
 
-        while() {
-            while() {
-                // Repartir
-            }
-            // Eliminar al peor
-        }
+        // Initialize query results
+        votes.forEach((k, votesList) -> {
+            auxResults.add(
+                    new QueryResult(k, votesList.size() * 100 / (double) voteQty));
+            votesList.forEach(vote -> currentVotesRank.put(vote, 1));
+        });
 
+        // If not enough candidates chosen or exactly as needed, return them
+        if(results.size() <= StateQueryHelper.REPS_PER_STATE)
+            return results;
+
+        while(!StateQueryHelper.foundWinners(results)) {
+            while(StateQueryHelper.candidateHasSurplus(results.first())) {
+                results = StateQueryHelper.redistributeSurplusVotes(votes,
+                        results, currentVotesRank);
+            }
+
+            // Reprocess all the least popular candidate's votes
+            votes.get(QueryHelper.getLeastPopularCandidate(results)).forEach(
+                    v -> {
+                        while(!QueryHelper.reprocessVote(v, votes, currentVotesRank));
+                    }
+            );
+            votes.remove(QueryHelper.getLeastPopularCandidate(results));
+            results.remove(results.last());
+        }
+        return results;
     }
 
     @Override

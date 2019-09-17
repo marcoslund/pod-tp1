@@ -8,10 +8,8 @@ import java.util.*;
 
 public class NationalQueryHelper {
 
-    private static final boolean HAS_BEEN_REPROCESSED = true;
-
     public static boolean foundWinner(final SortedSet<QueryResult> results) {
-        return Double.compare(results.first().getPercentage(), 50) >= 0;
+        return results.size() == 1 || Double.compare(results.first().getPercentage(), 50) >= 0;
     }
 
     public static int getRemainingVoteQty(Map<Vote, Integer> currentVotesRank) {
@@ -28,32 +26,6 @@ public class NationalQueryHelper {
                         / (double) voteCount)
         ));
         return tmp;
-    }
-
-    public static PoliticalParty getLeastPopularCandidate(SortedSet<QueryResult> results) {
-        return results.last().getPoliticalParty();
-    }
-
-    public static boolean reprocessVote(final Vote v,
-                                  final Map<PoliticalParty, List<Vote>> votes,
-                                  final Map<Vote, Integer> currentVotesRank) {
-        currentVotesRank.put(v, currentVotesRank.get(v) + 1);
-        if(currentVotesRank.get(v) > Vote.PARTY_COUNT) {
-            currentVotesRank.remove(v);
-            return HAS_BEEN_REPROCESSED; // All choices have been used
-        } else {
-            Optional<PoliticalParty> nextChoice = v.getChoice(currentVotesRank.get(v));
-            if(nextChoice.isPresent()) {
-                if(votes.containsKey(nextChoice.get())) {
-                    votes.get(nextChoice.get()).add(v);
-                    return HAS_BEEN_REPROCESSED; // Valid next choice has been used
-                } else
-                    return !HAS_BEEN_REPROCESSED; // Next candidate has been eliminated
-            } else {
-                currentVotesRank.remove(v);
-                return HAS_BEEN_REPROCESSED; // Empty next choice (no more choices left)
-            }
-        }
     }
 
 }
