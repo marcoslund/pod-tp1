@@ -1,13 +1,11 @@
 package ar.edu.itba.pod.interfaces.services;
 
-import ar.edu.itba.pod.interfaces.PoliticalParty;
 import ar.edu.itba.pod.interfaces.models.Vote;
 
 import java.rmi.Remote;
+import java.rmi.RemoteException;
 
 public interface RemoteMonitoringClient extends Remote {
 
-    public void notifyVote(Vote vote);
-
-    public PoliticalParty getPoliticalParty();
+    void notifyVote(Vote vote) throws RemoteException;
 }

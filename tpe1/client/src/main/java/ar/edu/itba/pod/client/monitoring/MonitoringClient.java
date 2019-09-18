@@ -12,22 +12,11 @@ import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
-public class MonitoringClient extends Client implements Serializable, RemoteMonitoringClient {
+public class MonitoringClient extends Client implements  RemoteMonitoringClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(MonitoringClient.class);
     private static MonitoringService service;
     private static Integer pollingPlaceNumber;
-
     private static PoliticalParty politicalParty;
-
-    public MonitoringClient(PoliticalParty politicalParty) {
-        this.setPoliticalParty(politicalParty);
-
-        try {
-            UnicastRemoteObject.exportObject(this, 0);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-    }
 
     public PoliticalParty getPoliticalParty() {
         return politicalParty;
@@ -35,10 +24,6 @@ public class MonitoringClient extends Client implements Serializable, RemoteMoni
 
     public static void setPoliticalParty(PoliticalParty politicalParty) {
         MonitoringClient.politicalParty = politicalParty;
-    }
-
-    private static MonitoringClient getInstance(){
-        return new MonitoringClient(politicalParty);
     }
 
     public static void main(String[] args) throws Exception {
@@ -50,9 +35,10 @@ public class MonitoringClient extends Client implements Serializable, RemoteMoni
 
         service = (MonitoringService) getRemoteService("monitor-service");
 
-        service.registerFiscal(getInstance(), pollingPlaceNumber);
+        RemoteMonitoringClient remoteMonitoringClient = new RemoteMonitoringClientImpl(politicalParty, pollingPlaceNumber);
+        UnicastRemoteObject.exportObject(remoteMonitoringClient, 0);
 
-        while(true);
+        service.registerFiscal(remoteMonitoringClient, pollingPlaceNumber, politicalParty);
     }
 
     private static boolean parseArguments() {

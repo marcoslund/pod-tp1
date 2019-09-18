@@ -10,6 +10,8 @@ import ar.edu.itba.pod.interfaces.models.QueryResult;
 import ar.edu.itba.pod.interfaces.models.Vote;
 import ar.edu.itba.pod.interfaces.services.*;
 import ar.edu.itba.pod.services.helpers.NationalQueryHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -19,10 +21,11 @@ import java.util.stream.Collectors;
 public class Servant
         implements AdministrationService, MonitoringService, QueryService, VotingService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Servant.class);
     private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
     private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
-    private static final Map<Long, List<RemoteMonitoringClient>> fiscalsMap = new HashMap<>();
+    private static final Map<Integer, List<RemoteMonitoringClient>> fiscalsMap = new HashMap<>();
     private static int voteCount = 0;
 
     public Servant() throws RemoteException {
@@ -63,22 +66,27 @@ public class Servant
     }
 
     @Override
-    public void registerFiscal(final RemoteMonitoringClient monitoringClient, final long tableNumber)
+    public void registerFiscal(RemoteMonitoringClient monitoringClient, Integer pollingPlaceNumber, PoliticalParty politicalParty)
             throws RemoteException, ConflictException, IllegalElectionStateException {
+
+        LOGGER.info("ENTERED IN REGISTER FISCAL");
 
         if(electionStarted.get() || electionFinished.get()) {
             throw new IllegalElectionStateException("Election started or finished");
         }
 
-        Optional<List<RemoteMonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(tableNumber));
-        if(!fiscals.isPresent()) {
-            fiscalsMap.put(tableNumber, new LinkedList<>());
-        }
+        Optional<List<RemoteMonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(pollingPlaceNumber));
 
-        if(fiscals.get().contains(monitoringClient))
+        LOGGER.info("Polling place number:{}", pollingPlaceNumber);
+
+        if(!fiscals.isPresent()) {
+            fiscalsMap.put(pollingPlaceNumber, new LinkedList<>());
+            LOGGER.info("Putting in map");
+        }
+        if(fiscalsMap.get(pollingPlaceNumber).contains(monitoringClient))
             throw new ConflictException("There is already a fiscal of the same political party in the table");
 
-        fiscals.get().add(monitoringClient);
+        fiscalsMap.get(pollingPlaceNumber).add(monitoringClient);
     }
 
     @Override
@@ -210,6 +218,8 @@ public class Servant
             throw new IllegalElectionStateException("Election not active.");
         }
 
+        LOGGER.error("BEFORE VOTING");
+
         synchronized (stateVotes) {
             for (Vote vote : votes) {
                 stateVotes.get(vote.getState())
@@ -221,15 +231,28 @@ public class Servant
 
                 Optional<List<RemoteMonitoringClient>> fiscalsOptional =
                         Optional.ofNullable(fiscalsMap.get(vote.getPollingPlaceNumber()));
-                if(fiscalsOptional.isPresent()) {
-                    for (RemoteMonitoringClient fiscal : fiscalsOptional.get()) {
-                        if (vote.getPoliticalParties().contains(fiscal.getPoliticalParty())) {
-                            fiscal.notifyVote(vote);
-                        }
+
+                LOGGER.info("Polling place number: {}", vote.getPollingPlaceNumber());
+
+                LOGGER.error("BEFORE CHECKING FISCALS");
+                for(Integer l : fiscalsMap.keySet()) {
+                    LOGGER.info(l.toString());
+                    for(RemoteMonitoringClient cl : fiscalsMap.get(l)) {
+                        LOGGER.info(cl.toString());
                     }
                 }
+                LOGGER.error("AFTER FOR!!!!");
+                if(fiscalsMap.get((int)(long)vote.getPollingPlaceNumber()) != null) {
+                    LOGGER.error("INSIDE IF");
+                    for (RemoteMonitoringClient fiscal : fiscalsMap.get((int)(long)vote.getPollingPlaceNumber())) {
+                        //if (vote.getPoliticalParties().contains(fiscal.getPoliticalParty())) {
+                            fiscal.notifyVote(vote);
+                        //}
+                        LOGGER.error("NOTIFYING FISCALS");
+                    }
+                }
+                LOGGER.error("AFTER NOTIFYING FISCALS");
             }
         }
     }
-
 }

@@ -9,6 +9,6 @@ import java.rmi.RemoteException;
 
 public interface MonitoringService extends Remote {
 
-    void registerFiscal(RemoteMonitoringClient monitoringClient, long tableNumber)
+    void registerFiscal(RemoteMonitoringClient monitoringClient, Integer pollingPlaceNumber, PoliticalParty politicalParty)
             throws RemoteException, IllegalElectionStateException, ConflictException;
 }
