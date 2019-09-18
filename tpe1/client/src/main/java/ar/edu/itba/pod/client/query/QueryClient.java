@@ -49,7 +49,7 @@ public class QueryClient extends Client {
         boolean parseStateSuccess = parseState();
         boolean parsePollingNumberSuccess = parsePollingNumber();
         if (parsedState && parsedPollingPlaceNumber) {
-            LOGGER.error("Either the state or the pollingPlaceNumber (id) must be passed.");
+            LOGGER.error("Either the state or the pollingPlaceNumber (id) must be passed (and not both).");
             return false;
         } else if(!parsedState && !parsedPollingPlaceNumber) {
             return true;
