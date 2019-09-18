@@ -12,10 +12,11 @@ import ar.edu.itba.pod.interfaces.services.MonitoringService;
 import ar.edu.itba.pod.interfaces.services.QueryService;
 import ar.edu.itba.pod.interfaces.services.VotingService;
 import ar.edu.itba.pod.model.PercentageChunk;
-import ar.edu.itba.pod.model.VoteProportion;
 import ar.edu.itba.pod.services.helpers.NationalQueryHelper;
 import ar.edu.itba.pod.services.helpers.QueryHelper;
 import ar.edu.itba.pod.services.helpers.StateQueryHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 public class Servant
         implements AdministrationService, MonitoringService, QueryService, VotingService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Servant.class);
     private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
     private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
@@ -41,6 +43,7 @@ public class Servant
         if(!electionStarted.compareAndSet(false, true)) {
             throw new IllegalElectionStateException("Election already active.");
         }
+        LOGGER.info("Election has started.");
     }
 
     @Override
@@ -50,6 +53,7 @@ public class Servant
         else {
             throw new IllegalElectionStateException("Election not active.");
         }
+        LOGGER.info("Election has ended.");
     }
 
     private boolean electionActive() {
@@ -58,6 +62,7 @@ public class Servant
 
     @Override
     public ElectionState queryElection() throws RemoteException {
+        LOGGER.debug("Retrieving election status...");
         if(!electionStarted.get())
             return ElectionState.NOT_STARTED;
         else if(electionFinished.get()) {
@@ -80,6 +85,7 @@ public class Servant
         if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
+        LOGGER.debug("Retrieving national results...");
 
         SortedSet<QueryResult> results = new TreeSet<>();
         final SortedSet<QueryResult> auxResults = results;
@@ -128,73 +134,33 @@ public class Servant
         if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
+        LOGGER.debug("Retrieving state {} results...", state);
 
-        SortedSet<QueryResult> results = new TreeSet<>();
-        final SortedSet<QueryResult> auxResults = results;
-        final int voteQty;
+        SortedSet<QueryResult> results;
         final Map<PoliticalParty, List<Vote>> votes;
-        final Map<Vote, Integer> currentVotesRank = new HashMap<>();
 
         // Retrieve and group votes by main choice
         synchronized (stateVotes) {
             votes = stateVotes.get(state).values().stream()
                     .flatMap(List::parallelStream)
                     .collect(Collectors.groupingBy(Vote::getMainChoice));
-            voteQty = voteCount;
         }
 
-        final Map<PoliticalParty, List<PercentageChunk>> partyChunks = new HashMap<>();
-        votes.forEach((mainChoice, votesList) -> {
-            final int totalVotes = votesList.size();
-            final Set<VoteProportion> voteProportions = new HashSet<>();
-            Map<Optional<PoliticalParty>, Map<Optional<PoliticalParty>, List<Vote>>> secondThirdCombination =
-                votesList.stream().collect(
-                        Collectors.groupingBy(Vote::getSecondChoice, Collectors.groupingBy(
-                                Vote::getThirdChoice
-                        )
-                    )
-            );
-            secondThirdCombination.forEach((secondChoice, thirdChoiceMap) -> {
-                thirdChoiceMap.forEach((thirdChoice, groupedVotesList) -> {
-                    final List<Optional<PoliticalParty>> choiceComb = new ArrayList<>();
-                    choiceComb.add(secondChoice);
-                    choiceComb.add(thirdChoice);
-                    final double percentage = 100 * groupedVotesList.size() / (double) totalVotes;
-                    voteProportions.add(new VoteProportion(choiceComb, percentage));
-                });
-            });
-            final List<PercentageChunk> chunks = new ArrayList<>();
-            final PercentageChunk firstChunk = new PercentageChunk(mainChoice, 1,
-                    votesList.size() / (double) voteQty, voteProportions);
-            partyChunks.put(mainChoice, chunks);
-        });
+        final Map<PoliticalParty, List<PercentageChunk>> partyChunks =
+                StateQueryHelper.initializePartyChunks(votes);
 
-//        // Initialize query results
-//        votes.forEach((k, votesList) -> {
-//            auxResults.add(
-//                    new QueryResult(k, votesList.size() * 100 / (double) voteQty));
-//            votesList.forEach(vote -> currentVotesRank.put(vote, 1));
-//        });
-//
-//        // If not enough candidates chosen or exactly as needed, return them
-//        if(results.size() <= StateQueryHelper.REPS_PER_STATE)
-//            return results;
-//
-//        while(!StateQueryHelper.foundWinners(results)) {
-//            while(StateQueryHelper.candidateHasSurplus(results.first())) {
-//                results = StateQueryHelper.redistributeSurplusVotes(votes,
-//                        results, currentVotesRank);
-//            }
-//
-//            // Reprocess all the least popular candidate's votes
-//            votes.get(QueryHelper.getLeastPopularCandidate(results)).forEach(
-//                    v -> {
-//                        while(!QueryHelper.reprocessVote(v, votes, currentVotesRank));
-//                    }
-//            );
-//            votes.remove(QueryHelper.getLeastPopularCandidate(results));
-//            results.remove(results.last());
-//        }
+        results = StateQueryHelper.getResults(partyChunks);
+
+        // If not enough candidates chosen or exactly as needed, return them
+        if(votes.size() <= StateQueryHelper.REPS_PER_STATE)
+            return results;
+
+        while(!StateQueryHelper.foundWinners(results)) {
+            results = StateQueryHelper.redistributeSurpluses(partyChunks, results);
+            results = StateQueryHelper.distributeLeastPopularChunks(partyChunks, results);
+        }
+        results = StateQueryHelper.redistributeSurpluses(partyChunks, results);
+
         return results;
     }
 
@@ -206,6 +172,7 @@ public class Servant
         if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
+        LOGGER.debug("Retrieving table {} results...", tableNumber);
 
         SortedSet<QueryResult> results = new TreeSet<>();
 
@@ -248,6 +215,7 @@ public class Servant
         if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
+        LOGGER.info("Registering {} votes...", votes.size());
 
         synchronized (stateVotes) {
             for (Vote vote : votes) {
