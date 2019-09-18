@@ -168,35 +168,26 @@ public class Servant
             partyChunks.put(mainChoice, chunks);
         });
 
-        // LLENAR RESULTS
         results = StateQueryHelper.getResults(partyChunks);
-        System.out.println(results);
+        System.out.println("INIT RESULTS: " + results + "\n");
         // If not enough candidates chosen or exactly as needed, return them
         if(votes.size() <= StateQueryHelper.REPS_PER_STATE)
             return results;
 
-        //while(!StateQueryHelper.foundWinners(results)) {
-            //while(StateQueryHelper.candidateHasSurplus(results.first())) {
+        while(!StateQueryHelper.foundWinners(results)) {
+            while(StateQueryHelper.candidateHasSurplus(results.first())) {
                 results = StateQueryHelper.redistributeSurplusVotes(partyChunks, results.first());
-            //}
-        //}
-        System.out.println(results);
-//
-//        while(!StateQueryHelper.foundWinners(results)) {
-//            while(StateQueryHelper.candidateHasSurplus(results.first())) {
-//                results = StateQueryHelper.redistributeSurplusVotes(votes,
-//                        results, currentVotesRank);
-//            }
-//
-//            // Reprocess all the least popular candidate's votes
-//            votes.get(QueryHelper.getLeastPopularCandidate(results)).forEach(
-//                    v -> {
-//                        while(!QueryHelper.reprocessVote(v, votes, currentVotesRank));
-//                    }
-//            );
-//            votes.remove(QueryHelper.getLeastPopularCandidate(results));
-//            results.remove(results.last());
-//        }
+                System.out.println("AFTER SURP RESULTS: " + results + "\n");
+            }
+            // Reprocess all the least popular candidate's chunks
+            results = StateQueryHelper.distributeLeastPopular(partyChunks, results);
+            System.out.println("AFTER DEL RESULTS: " + results + "\n");
+        }
+        while(StateQueryHelper.candidateHasSurplus(results.first())) {
+            results = StateQueryHelper.redistributeSurplusVotes(partyChunks, results.first());
+        }
+        System.out.println("FINAL RESULTS: " + results + "\n");
+
         return results;
     }
 
