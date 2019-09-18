@@ -129,11 +129,9 @@ public class Servant
             throw new IllegalElectionStateException("Election not active.");
         }
 
-        SortedSet<QueryResult> results = new TreeSet<>();
-        final SortedSet<QueryResult> auxResults = results;
+        SortedSet<QueryResult> results;
         final int voteQty;
         final Map<PoliticalParty, List<Vote>> votes;
-        final Map<Vote, Integer> currentVotesRank = new HashMap<>();
 
         // Retrieve and group votes by main choice
         synchronized (stateVotes) {
@@ -166,19 +164,23 @@ public class Servant
             final List<PercentageChunk> chunks = new ArrayList<>();
             final PercentageChunk firstChunk = new PercentageChunk(mainChoice, 1,
                     votesList.size() / (double) voteQty, voteProportions);
+            chunks.add(firstChunk);
             partyChunks.put(mainChoice, chunks);
         });
 
-//        // Initialize query results
-//        votes.forEach((k, votesList) -> {
-//            auxResults.add(
-//                    new QueryResult(k, votesList.size() * 100 / (double) voteQty));
-//            votesList.forEach(vote -> currentVotesRank.put(vote, 1));
-//        });
-//
-//        // If not enough candidates chosen or exactly as needed, return them
-//        if(results.size() <= StateQueryHelper.REPS_PER_STATE)
-//            return results;
+        // LLENAR RESULTS
+        results = StateQueryHelper.getResults(partyChunks);
+
+        // If not enough candidates chosen or exactly as needed, return them
+        if(votes.size() <= StateQueryHelper.REPS_PER_STATE)
+            return results;
+
+        while(!StateQueryHelper.foundWinners(results)) {
+            while(StateQueryHelper.candidateHasSurplus(results.first())) {
+                results = StateQueryHelper.redistributeSurplusVotes(partyChunks, results.first());
+            }
+        }
+
 //
 //        while(!StateQueryHelper.foundWinners(results)) {
 //            while(StateQueryHelper.candidateHasSurplus(results.first())) {

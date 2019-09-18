@@ -19,6 +19,12 @@ public class PercentageChunk {
         this.proportions = proportions;
     }
 
+    @Override
+    public String toString() {
+        return currentParty + "; Rank: " + currentRank + "; " + percentage
+                + "%; " + proportions;
+    }
+
     public int getCurrentRank() {
         return currentRank;
     }
@@ -26,6 +32,8 @@ public class PercentageChunk {
     public double getPercentage() {
         return percentage;
     }
+
+    public void setPercentage(double percentage) { this.percentage = percentage; }
 
     public Set<VoteProportion> getProportions() {
         return proportions;

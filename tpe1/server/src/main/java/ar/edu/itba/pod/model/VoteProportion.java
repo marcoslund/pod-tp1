@@ -17,6 +17,16 @@ public class VoteProportion {
         this.chunkPercentage = chunkPercentage;
     }
 
+    public Optional<PoliticalParty> getNextChoice() {
+        Optional<PoliticalParty> pp;
+        try {
+            pp = parties.get(0);
+        } catch(IndexOutOfBoundsException e) {
+            return Optional.empty();
+        }
+        return pp;
+    }
+
     public List<Optional<PoliticalParty>> getParties() {
         return parties;
     }
@@ -39,5 +49,10 @@ public class VoteProportion {
     @Override
     public int hashCode() {
         return Objects.hash(parties, chunkPercentage);
+    }
+
+    @Override
+    public String toString() {
+        return parties + "; " + chunkPercentage + "%";
     }
 }
