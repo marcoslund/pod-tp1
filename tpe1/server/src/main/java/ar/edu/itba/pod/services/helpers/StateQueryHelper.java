@@ -35,10 +35,11 @@ public class StateQueryHelper {
 
         final SortedSet<QueryResult> tmp = new TreeSet<>();
         final List<PercentageChunk> chunkList = partyChunks.get(surplusResult.getPoliticalParty());
+        double surplusPercentage = surplusResult.getPercentage() - getWinningPercentage();
 
         while(candidateHasSurplus(surplusResult)) {
             final PercentageChunk chunkToDistribute = chunkList.get(chunkList.size() - 1);
-            double surplusPercentage = surplusResult.getPercentage() - getWinningPercentage();
+
             final double currentSurplusPercentage = surplusPercentage;
             Map<Optional<PoliticalParty>, List<VoteProportion>> splitFragments =
                     chunkToDistribute.getProportions().stream()
@@ -49,7 +50,7 @@ public class StateQueryHelper {
             splitFragments.forEach((partyOpt, props) -> {
                 partyOpt.ifPresent(party -> {
                     partyChunks.get(party).add(generateChunk(props, currentSurplusPercentage,
-                            party, chunkToDistribute);
+                            party, chunkToDistribute));
                 });
             });
 
@@ -57,37 +58,9 @@ public class StateQueryHelper {
                 chunkToDistribute.setPercentage(chunkToDistribute.getPercentage() - surplusPercentage);
             }
 
-            //
-
             surplusPercentage -= chunkToDistribute.getPercentage();
         }
-
-
-//        Map<PoliticalParty, Integer> nextChoiceVotes = new HashMap<>();
-//        for(Vote vote : votes.get(results.first())) {
-//            int currentRank = currentVotesRank.get(vote);
-//            if((currentRank != 3) && vote.getChoice(currentRank + 1).isPresent()) {
-//                PoliticalParty nextChoice = vote.getChoice(currentRank + 1).get();
-//                currentVotesRank.put(vote, currentRank + 1);
-//                if(votes.containsKey(nextChoice)) {
-//                    if (!nextChoiceVotes.containsKey(nextChoice)) {
-//                        nextChoiceVotes.put(nextChoice, 1);
-//                    } else {
-//                        nextChoiceVotes.put(nextChoice, nextChoiceVotes.get(nextChoice) + 1);
-//                    }
-//                }
-//            }
-//        }
-        // Buscar distribucion de votos
-        // Pasar votos
-        // Armar nuevos results
-
-
-//        results.forEach(result -> tmp.add(new QueryResult(
-//                result.getPoliticalParty(),
-//                votes.get(result.getPoliticalParty()).size() * 100
-//                        / (double) voteCount)
-//        ));
+        
         return tmp;
     }
 
