@@ -12,10 +12,12 @@ import java.rmi.server.UnicastRemoteObject;
 
 public class Server {
     private static Logger logger = LoggerFactory.getLogger(Server.class);
+    private static String serverAddress;
 
     public static void main(String[] args) {
         logger.info("tpe1 Server Starting ...");
-        System.setProperty("java.rmi.server.hostname", "localhost");
+        parseServerAddress();
+        System.setProperty("java.rmi.server.hostname", serverAddress);
 
         try {
             final Servant servant = new Servant();
@@ -30,6 +32,13 @@ public class Server {
             System.err.println("Error instantiating servant.");
             e.printStackTrace();
             System.exit(1);
+        }
+    }
+
+    private static void parseServerAddress() {
+        serverAddress = System.getProperty("serverAddress");
+        if(serverAddress == null) {
+            serverAddress = "localhost";
         }
     }
 }
