@@ -11,6 +11,8 @@ import ar.edu.itba.pod.interfaces.services.AdministrationService;
 import ar.edu.itba.pod.interfaces.services.MonitoringService;
 import ar.edu.itba.pod.interfaces.services.QueryService;
 import ar.edu.itba.pod.interfaces.services.VotingService;
+import ar.edu.itba.pod.model.PercentageChunk;
+import ar.edu.itba.pod.model.VoteProportion;
 import ar.edu.itba.pod.services.helpers.NationalQueryHelper;
 import ar.edu.itba.pod.services.helpers.QueryHelper;
 import ar.edu.itba.pod.services.helpers.StateQueryHelper;
@@ -141,32 +143,58 @@ public class Servant
             voteQty = voteCount;
         }
 
-        // Initialize query results
-        votes.forEach((k, votesList) -> {
-            auxResults.add(
-                    new QueryResult(k, votesList.size() * 100 / (double) voteQty));
-            votesList.forEach(vote -> currentVotesRank.put(vote, 1));
+        final Map<PoliticalParty, List<PercentageChunk>> partyChunks = new HashMap<>();
+        votes.forEach((mainChoice, votesList) -> {
+            final int totalVotes = votesList.size();
+            final Set<VoteProportion> voteProportions = new HashSet<>();
+            Map<Optional<PoliticalParty>, Map<Optional<PoliticalParty>, List<Vote>>> secondThirdCombination =
+                votesList.stream().collect(
+                        Collectors.groupingBy(Vote::getSecondChoice, Collectors.groupingBy(
+                                Vote::getThirdChoice
+                        )
+                    )
+            );
+            secondThirdCombination.forEach((secondChoice, thirdChoiceMap) -> {
+                thirdChoiceMap.forEach((thirdChoice, groupedVotesList) -> {
+                    final List<Optional<PoliticalParty>> choiceComb = new ArrayList<>();
+                    choiceComb.add(secondChoice);
+                    choiceComb.add(thirdChoice);
+                    final double percentage = 100 * groupedVotesList.size() / (double) totalVotes;
+                    voteProportions.add(new VoteProportion(choiceComb, percentage));
+                });
+            });
+            final List<PercentageChunk> chunks = new ArrayList<>();
+            final PercentageChunk firstChunk = new PercentageChunk(mainChoice, 1,
+                    votesList.size() / (double) voteQty, voteProportions);
+            partyChunks.put(mainChoice, chunks);
         });
 
-        // If not enough candidates chosen or exactly as needed, return them
-        if(results.size() <= StateQueryHelper.REPS_PER_STATE)
-            return results;
-
-        while(!StateQueryHelper.foundWinners(results)) {
-            while(StateQueryHelper.candidateHasSurplus(results.first())) {
-                results = StateQueryHelper.redistributeSurplusVotes(votes,
-                        results, currentVotesRank);
-            }
-
-            // Reprocess all the least popular candidate's votes
-            votes.get(QueryHelper.getLeastPopularCandidate(results)).forEach(
-                    v -> {
-                        while(!QueryHelper.reprocessVote(v, votes, currentVotesRank));
-                    }
-            );
-            votes.remove(QueryHelper.getLeastPopularCandidate(results));
-            results.remove(results.last());
-        }
+//        // Initialize query results
+//        votes.forEach((k, votesList) -> {
+//            auxResults.add(
+//                    new QueryResult(k, votesList.size() * 100 / (double) voteQty));
+//            votesList.forEach(vote -> currentVotesRank.put(vote, 1));
+//        });
+//
+//        // If not enough candidates chosen or exactly as needed, return them
+//        if(results.size() <= StateQueryHelper.REPS_PER_STATE)
+//            return results;
+//
+//        while(!StateQueryHelper.foundWinners(results)) {
+//            while(StateQueryHelper.candidateHasSurplus(results.first())) {
+//                results = StateQueryHelper.redistributeSurplusVotes(votes,
+//                        results, currentVotesRank);
+//            }
+//
+//            // Reprocess all the least popular candidate's votes
+//            votes.get(QueryHelper.getLeastPopularCandidate(results)).forEach(
+//                    v -> {
+//                        while(!QueryHelper.reprocessVote(v, votes, currentVotesRank));
+//                    }
+//            );
+//            votes.remove(QueryHelper.getLeastPopularCandidate(results));
+//            results.remove(results.last());
+//        }
         return results;
     }
 
