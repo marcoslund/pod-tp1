@@ -9,7 +9,10 @@ import ar.edu.itba.pod.interfaces.exceptions.PollingPlaceNotFoundException;
 import ar.edu.itba.pod.interfaces.models.QueryResult;
 import ar.edu.itba.pod.interfaces.models.Vote;
 import ar.edu.itba.pod.interfaces.services.*;
+import ar.edu.itba.pod.model.PercentageChunk;
 import ar.edu.itba.pod.services.helpers.NationalQueryHelper;
+import ar.edu.itba.pod.services.helpers.QueryHelper;
+import ar.edu.itba.pod.services.helpers.StateQueryHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +24,7 @@ import java.util.stream.Collectors;
 public class Servant
         implements AdministrationService, MonitoringService, QueryService, VotingService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Servant.class);
     private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
     private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
@@ -38,6 +42,7 @@ public class Servant
         if(!electionStarted.compareAndSet(false, true)) {
             throw new IllegalElectionStateException("Election already active.");
         }
+        LOGGER.info("Election has started.");
     }
 
     @Override
@@ -47,6 +52,7 @@ public class Servant
         else {
             throw new IllegalElectionStateException("Election not active.");
         }
+        LOGGER.info("Election has ended.");
     }
 
     private boolean electionActive() {
@@ -55,6 +61,7 @@ public class Servant
 
     @Override
     public ElectionState queryElection() throws RemoteException {
+        LOGGER.debug("Retrieving election status...");
         if(!electionStarted.get())
             return ElectionState.NOT_STARTED;
         else if(electionFinished.get()) {
@@ -65,11 +72,13 @@ public class Servant
     }
 
     @Override
-    public void registerFiscal(RemoteMonitoringClient monitoringClient, Integer pollingPlaceNumber, PoliticalParty politicalParty)
+    public void registerFiscal(RemoteMonitoringClient monitoringClient, Integer pollingPlaceNumber,
+                               PoliticalParty politicalParty)
             throws RemoteException, ConflictException, IllegalElectionStateException {
 
         if(electionStarted.get() || electionFinished.get()) {
-            throw new IllegalElectionStateException("Election started or finished");
+            throw new IllegalElectionStateException("Could not register fiscal. " +
+                    "Election started or finished");
         }
 
         synchronized (fiscalsMap) {
@@ -78,9 +87,14 @@ public class Servant
 
             if (!fiscals.isPresent()) {
                 fiscalsMap.put(pollingPlaceNumber, new HashMap<>());
+                LOGGER.info("Fiscal from party {} registered in table {}.",
+                        politicalParty, pollingPlaceNumber);
             }
             if (fiscalsMap.get(pollingPlaceNumber).get(politicalParty) != null) {
-                throw new ConflictException("There is already a fiscal of the same political party in the table");
+                LOGGER.error("There is already a fiscal of party {} in table {}.",
+                politicalParty, pollingPlaceNumber);
+                throw new ConflictException("There is already a fiscal of party "
+                        + politicalParty + " in table " + pollingPlaceNumber + ".");
             }
 
             fiscalsMap.get(pollingPlaceNumber).put(politicalParty, monitoringClient);
@@ -94,6 +108,7 @@ public class Servant
         if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
+        LOGGER.debug("Retrieving national results...");
 
         SortedSet<QueryResult> results = new TreeSet<>();
         final SortedSet<QueryResult> auxResults = results;
@@ -121,17 +136,16 @@ public class Servant
         while(!NationalQueryHelper.foundWinner(results)) {
 
             // Reprocess all the least popular candidate's votes
-            votes.get(NationalQueryHelper.getLeastPopularCandidate(results)).forEach(
+            votes.get(QueryHelper.getLeastPopularCandidate(results)).forEach(
                 v -> {
-                    while(!NationalQueryHelper.reprocessVote(v, votes, currentVotesRank));
+                    while(!QueryHelper.reprocessVote(v, votes, currentVotesRank));
                 }
             );
-            votes.remove(NationalQueryHelper.getLeastPopularCandidate(results));
+            votes.remove(QueryHelper.getLeastPopularCandidate(results));
             results.remove(results.last());
 
             // Update percentages based on new vote distribution
-            results = NationalQueryHelper.updateResults(results, votes,
-                    NationalQueryHelper.getRemainingVoteQty(currentVotesRank));
+            results = NationalQueryHelper.updateResults(results, votes, voteQty);
         }
         return results;
     }
@@ -143,27 +157,34 @@ public class Servant
         if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
+        LOGGER.debug("Retrieving state {} results...", state);
 
-        SortedSet<QueryResult> results = new TreeSet<>();
-        final int voteQty;
+        SortedSet<QueryResult> results;
         final Map<PoliticalParty, List<Vote>> votes;
-        final Map<Vote, Integer> currentVotesRank = new HashMap<>();
 
         // Retrieve and group votes by main choice
         synchronized (stateVotes) {
             votes = stateVotes.get(state).values().stream()
                     .flatMap(List::parallelStream)
                     .collect(Collectors.groupingBy(Vote::getMainChoice));
-            voteQty = voteCount;
         }
 
-        /*while() {
-            while() {
-                // Repartir
-            }
-            // Eliminar al peor
-        }*/
-        return null;
+        final Map<PoliticalParty, List<PercentageChunk>> partyChunks =
+                StateQueryHelper.initializePartyChunks(votes);
+
+        results = StateQueryHelper.getResults(partyChunks);
+
+        // If not enough candidates chosen or exactly as needed, return them
+        if(votes.size() <= StateQueryHelper.REPS_PER_STATE)
+            return results;
+
+        while(!StateQueryHelper.foundWinners(results)) {
+            results = StateQueryHelper.redistributeSurpluses(partyChunks, results);
+            results = StateQueryHelper.distributeLeastPopularChunks(partyChunks, results);
+        }
+        results = StateQueryHelper.redistributeSurpluses(partyChunks, results);
+
+        return results;
     }
 
     @Override
@@ -174,6 +195,7 @@ public class Servant
         if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
+        LOGGER.debug("Retrieving table {} results...", tableNumber);
 
         SortedSet<QueryResult> results = new TreeSet<>();
 
@@ -215,6 +237,7 @@ public class Servant
         if(!electionActive()) {
             throw new IllegalElectionStateException("Election not active.");
         }
+        LOGGER.info("Registering {} votes...", votes.size());
 
         synchronized (stateVotes) {
             for (Vote vote : votes) {
