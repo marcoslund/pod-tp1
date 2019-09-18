@@ -11,10 +11,10 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
 public class Server {
-    private static Logger logger = LoggerFactory.getLogger(Server.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Server.class);
 
     public static void main(String[] args) {
-        logger.info("tpe1 Server Starting ...");
+        LOGGER.info("tpe1 Server Starting ...");
         System.setProperty("java.rmi.server.hostname", "localhost");
 
         try {

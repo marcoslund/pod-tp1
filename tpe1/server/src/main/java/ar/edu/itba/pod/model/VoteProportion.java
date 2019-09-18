@@ -8,7 +8,6 @@ import java.util.Optional;
 
 public class VoteProportion {
 
-    public static final int MAX_PARTIES = 3;
     private final List<Optional<PoliticalParty>> parties;
     private double chunkPercentage;
 

@@ -82,7 +82,16 @@ public class StateQueryHelper {
         return partyChunks;
     }
 
-    public static SortedSet<QueryResult> redistributeSurplusVotes(
+    public static SortedSet<QueryResult> redistributeSurpluses(
+            final Map<PoliticalParty, List<PercentageChunk>> partyChunks,
+            SortedSet<QueryResult> results) {
+        while(StateQueryHelper.candidateHasSurplus(results.first())) {
+            results = StateQueryHelper.redistributeSurplusVotes(partyChunks, results.first());
+        }
+        return results;
+    }
+
+    private static SortedSet<QueryResult> redistributeSurplusVotes(
             final Map<PoliticalParty, List<PercentageChunk>> partyChunks,
             final QueryResult surplusResult) {
 
@@ -91,12 +100,6 @@ public class StateQueryHelper {
 
         while(candidateHasSurplus(partyChunks, surplusResult.getPoliticalParty())) {
             final PercentageChunk chunkToDistribute = chunkList.get(chunkList.size() - 1);
-            System.out.println("CTD: " + chunkToDistribute + "\n");
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
 
             final double currentSurplusPercentage;
             if(Double.compare(surplusPercentage, chunkToDistribute.getPercentage()) < 0) {
@@ -114,7 +117,7 @@ public class StateQueryHelper {
         return getResults(partyChunks);
     }
 
-    public static SortedSet<QueryResult> distributeLeastPopular(
+    public static SortedSet<QueryResult> distributeLeastPopularChunks(
             final Map<PoliticalParty, List<PercentageChunk>> partyChunks,
             final SortedSet<QueryResult> results) {
         partyChunks.get(QueryHelper.getLeastPopularCandidate(results)).forEach(chunk -> {
@@ -151,10 +154,11 @@ public class StateQueryHelper {
         Set<VoteProportion> newProps = new HashSet<>();
         double proportionSum =
                 props.stream().mapToDouble(VoteProportion::getChunkPercentage).sum();
+
         for(VoteProportion vp : props) {
             List<Optional<PoliticalParty>> nextChoices;
             int fromIndex = 1;
-            int toIndex = props.size();
+            int toIndex = vp.getParties().size();
             if(toIndex > fromIndex)
                 nextChoices = vp.getParties().subList(fromIndex, toIndex);
             else
