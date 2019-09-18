@@ -108,19 +108,25 @@ public class QueryClient extends Client {
         try {
             if(isNationalQuery()) {
                 LOGGER.debug("Running national query...");
+
                 votes = service.queryNationResults();
-                LOGGER.info("{} won the election.", votes.first().getPoliticalParty());
+
+                logElectionResult(votes.first().getPoliticalParty() + " won the election.");
             } else if(isStateQuery()) {
                 LOGGER.debug("Running state query...");
+
                 votes = service.queryStateResults(state);
-                LOGGER.info("{} won the election in state {}.",
-                        votes.stream().map(QueryResult::getPoliticalParty)
-                                .collect(Collectors.toList()), state);
+
+                logElectionResult(votes.stream().map(QueryResult::getPoliticalParty)
+                        .collect(Collectors.toList()) + " won the election in state "
+                    + state);
             } else {
                 LOGGER.debug("Running table query...");
+
                 votes = service.queryTableResults(pollingPlaceNumber);
-                LOGGER.info("{} won the election in table {}.",
-                        votes.first().getPoliticalParty(), pollingPlaceNumber);
+
+                logElectionResult(votes.first().getPoliticalParty() + " won the election " +
+                        "in table " + pollingPlaceNumber);
             }
 
             writeVotesToCsv();
@@ -150,5 +156,12 @@ public class QueryClient extends Client {
         throws IOException {
         fw.write(String.format("%.2f", result.getPercentage())
                 + "%;" + result.getPoliticalParty() + "\n");
+    }
+
+    private static void logElectionResult(final String msg) {
+        if(votes.isEmpty())
+            LOGGER.info("No votes registered.");
+        else
+            LOGGER.info(msg);
     }
 }

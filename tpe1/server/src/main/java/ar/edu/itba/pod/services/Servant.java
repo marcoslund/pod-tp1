@@ -106,7 +106,7 @@ public class Servant
     public SortedSet<QueryResult> queryNationResults()
             throws RemoteException, IllegalElectionStateException {
 
-        if(!electionActive()) {
+        if(!electionStarted.get()) {
             throw new IllegalElectionStateException("Election not active.");
         }
         LOGGER.debug("Retrieving national results...");
@@ -155,7 +155,7 @@ public class Servant
     public SortedSet<QueryResult> queryStateResults(final State state)
             throws RemoteException, IllegalElectionStateException {
 
-        if(!electionActive()) {
+        if(!electionStarted.get()) {
             throw new IllegalElectionStateException("Election not active.");
         }
         LOGGER.debug("Retrieving state {} results...", state);
@@ -193,7 +193,7 @@ public class Servant
             throws RemoteException, IllegalElectionStateException,
                 PollingPlaceNotFoundException {
 
-        if(!electionActive()) {
+        if(!electionStarted.get()) {
             throw new IllegalElectionStateException("Election not active.");
         }
         LOGGER.debug("Retrieving table {} results...", tableNumber);
