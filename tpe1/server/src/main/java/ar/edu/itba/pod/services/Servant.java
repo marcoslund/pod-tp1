@@ -25,7 +25,7 @@ public class Servant
     private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
     private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
-    private static final Map<Integer, List<RemoteMonitoringClient>> fiscalsMap = new HashMap<>();
+    private static final Map<Integer, Map<PoliticalParty, RemoteMonitoringClient>> fiscalsMap = new HashMap<>();
     private static int voteCount = 0;
 
     public Servant() throws RemoteException {
@@ -75,18 +75,19 @@ public class Servant
             throw new IllegalElectionStateException("Election started or finished");
         }
 
-        Optional<List<RemoteMonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(pollingPlaceNumber));
+        Optional<Map<PoliticalParty, RemoteMonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(pollingPlaceNumber));
 
         LOGGER.info("Polling place number:{}", pollingPlaceNumber);
 
         if(!fiscals.isPresent()) {
-            fiscalsMap.put(pollingPlaceNumber, new LinkedList<>());
+            fiscalsMap.put(pollingPlaceNumber, new HashMap<>());
             LOGGER.info("Putting in map");
         }
-        if(fiscalsMap.get(pollingPlaceNumber).contains(monitoringClient))
+        if(fiscalsMap.get(pollingPlaceNumber).get(politicalParty) != null) {
             throw new ConflictException("There is already a fiscal of the same political party in the table");
+        }
 
-        fiscalsMap.get(pollingPlaceNumber).add(monitoringClient);
+        fiscalsMap.get(pollingPlaceNumber).put(politicalParty, monitoringClient);
     }
 
     @Override
@@ -218,8 +219,6 @@ public class Servant
             throw new IllegalElectionStateException("Election not active.");
         }
 
-        LOGGER.error("BEFORE VOTING");
-
         synchronized (stateVotes) {
             for (Vote vote : votes) {
                 stateVotes.get(vote.getState())
@@ -229,29 +228,13 @@ public class Servant
                         .add(vote);
                 voteCount++;
 
-                Optional<List<RemoteMonitoringClient>> fiscalsOptional =
-                        Optional.ofNullable(fiscalsMap.get(vote.getPollingPlaceNumber()));
-
-                LOGGER.info("Polling place number: {}", vote.getPollingPlaceNumber());
-
-                LOGGER.error("BEFORE CHECKING FISCALS");
-                for(Integer l : fiscalsMap.keySet()) {
-                    LOGGER.info(l.toString());
-                    for(RemoteMonitoringClient cl : fiscalsMap.get(l)) {
-                        LOGGER.info(cl.toString());
-                    }
-                }
-                LOGGER.error("AFTER FOR!!!!");
                 if(fiscalsMap.get((int)(long)vote.getPollingPlaceNumber()) != null) {
-                    LOGGER.error("INSIDE IF");
-                    for (RemoteMonitoringClient fiscal : fiscalsMap.get((int)(long)vote.getPollingPlaceNumber())) {
-                        //if (vote.getPoliticalParties().contains(fiscal.getPoliticalParty())) {
-                            fiscal.notifyVote(vote);
-                        //}
-                        LOGGER.error("NOTIFYING FISCALS");
+                    for (PoliticalParty politicalParty : fiscalsMap.get((int)(long)vote.getPollingPlaceNumber()).keySet()) {
+                        if (vote.getPoliticalParties().contains(politicalParty)) {
+                            fiscalsMap.get((int)(long)vote.getPollingPlaceNumber()).get(politicalParty).notifyVote(vote);
+                        }
                     }
                 }
-                LOGGER.error("AFTER NOTIFYING FISCALS");
             }
         }
     }
