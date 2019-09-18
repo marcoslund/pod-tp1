@@ -93,6 +93,7 @@ public class Servant
             if (fiscalsMap.get(pollingPlaceNumber).get(politicalParty) != null) {
                 LOGGER.error("There is already a fiscal of party {} in table {}.",
                 politicalParty, pollingPlaceNumber);
+
                 throw new ConflictException("There is already a fiscal of party "
                         + politicalParty + " in table " + pollingPlaceNumber + ".");
             }

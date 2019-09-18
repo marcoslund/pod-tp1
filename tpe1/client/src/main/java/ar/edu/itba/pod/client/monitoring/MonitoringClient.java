@@ -2,6 +2,7 @@ package ar.edu.itba.pod.client.monitoring;
 
 import ar.edu.itba.pod.client.Client;
 import ar.edu.itba.pod.interfaces.PoliticalParty;
+import ar.edu.itba.pod.interfaces.exceptions.IllegalElectionStateException;
 import ar.edu.itba.pod.interfaces.models.Vote;
 import ar.edu.itba.pod.interfaces.services.MonitoringService;
 import ar.edu.itba.pod.interfaces.services.RemoteMonitoringClient;
@@ -28,8 +29,10 @@ public class MonitoringClient extends Client implements  RemoteMonitoringClient 
 
     public static void main(String[] args) throws Exception {
         LOGGER.info("tpe1 MonitoringClient Starting ...");
+
         if(!parseArguments())
             System.exit(1);
+
         System.out.println("serverAddr: " + serverAddress + "; pollingPlace: " + pollingPlaceNumber
             + "; party: " + politicalParty);
 
@@ -38,7 +41,14 @@ public class MonitoringClient extends Client implements  RemoteMonitoringClient 
         RemoteMonitoringClient remoteMonitoringClient = new RemoteMonitoringClientImpl(politicalParty, pollingPlaceNumber);
         UnicastRemoteObject.exportObject(remoteMonitoringClient, 0);
 
-        service.registerFiscal(remoteMonitoringClient, pollingPlaceNumber, politicalParty);
+        try
+        {
+            service.registerFiscal(remoteMonitoringClient, pollingPlaceNumber, politicalParty);
+        }
+        catch(Exception e){
+            LOGGER.error(e.getMessage());
+            System.exit(1);
+        }
     }
 
     private static boolean parseArguments() {
