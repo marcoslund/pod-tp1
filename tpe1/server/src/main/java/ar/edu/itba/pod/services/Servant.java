@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 public class Servant
         implements AdministrationService, MonitoringService, QueryService, VotingService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Servant.class);
     private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
     private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
@@ -69,25 +68,23 @@ public class Servant
     public void registerFiscal(RemoteMonitoringClient monitoringClient, Integer pollingPlaceNumber, PoliticalParty politicalParty)
             throws RemoteException, ConflictException, IllegalElectionStateException {
 
-        LOGGER.info("ENTERED IN REGISTER FISCAL");
-
         if(electionStarted.get() || electionFinished.get()) {
             throw new IllegalElectionStateException("Election started or finished");
         }
 
-        Optional<Map<PoliticalParty, RemoteMonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(pollingPlaceNumber));
+        synchronized (fiscalsMap) {
 
-        LOGGER.info("Polling place number:{}", pollingPlaceNumber);
+            Optional<Map<PoliticalParty, RemoteMonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(pollingPlaceNumber));
 
-        if(!fiscals.isPresent()) {
-            fiscalsMap.put(pollingPlaceNumber, new HashMap<>());
-            LOGGER.info("Putting in map");
+            if (!fiscals.isPresent()) {
+                fiscalsMap.put(pollingPlaceNumber, new HashMap<>());
+            }
+            if (fiscalsMap.get(pollingPlaceNumber).get(politicalParty) != null) {
+                throw new ConflictException("There is already a fiscal of the same political party in the table");
+            }
+
+            fiscalsMap.get(pollingPlaceNumber).put(politicalParty, monitoringClient);
         }
-        if(fiscalsMap.get(pollingPlaceNumber).get(politicalParty) != null) {
-            throw new ConflictException("There is already a fiscal of the same political party in the table");
-        }
-
-        fiscalsMap.get(pollingPlaceNumber).put(politicalParty, monitoringClient);
     }
 
     @Override
