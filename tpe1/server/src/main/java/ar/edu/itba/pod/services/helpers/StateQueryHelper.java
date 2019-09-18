@@ -2,6 +2,7 @@ package ar.edu.itba.pod.services.helpers;
 
 import ar.edu.itba.pod.interfaces.PoliticalParty;
 import ar.edu.itba.pod.interfaces.models.QueryResult;
+import ar.edu.itba.pod.interfaces.models.Vote;
 import ar.edu.itba.pod.model.PercentageChunk;
 import ar.edu.itba.pod.model.VoteProportion;
 
@@ -42,6 +43,43 @@ public class StateQueryHelper {
                 )
         );
         return results;
+    }
+
+    public static Map<PoliticalParty, List<PercentageChunk>> initializePartyChunks(
+            final Map<PoliticalParty, List<Vote>> votes) {
+
+        final int stateVoteQty = votes.values().stream().mapToInt(List::size).sum();
+        final Map<PoliticalParty, List<PercentageChunk>> partyChunks = new HashMap<>();
+
+        votes.forEach((mainChoice, votesList) -> {
+            final int totalVotes = votesList.size();
+            final Set<VoteProportion> voteProportions = new HashSet<>();
+            Map<Optional<PoliticalParty>, Map<Optional<PoliticalParty>, List<Vote>>> secondThirdCombination =
+                votesList.stream().collect(
+                    Collectors.groupingBy(Vote::getSecondChoice, Collectors.groupingBy(
+                        Vote::getThirdChoice
+                        )
+                    )
+                );
+
+            secondThirdCombination.forEach((secondChoice, thirdChoiceMap) -> {
+                thirdChoiceMap.forEach((thirdChoice, groupedVotesList) -> {
+                    final List<Optional<PoliticalParty>> choiceComb = new ArrayList<>();
+                    choiceComb.add(secondChoice);
+                    choiceComb.add(thirdChoice);
+                    final double percentage = 100 * groupedVotesList.size() / (double) totalVotes;
+                    voteProportions.add(new VoteProportion(choiceComb, percentage));
+                });
+            });
+
+            final List<PercentageChunk> chunks = new ArrayList<>();
+            final PercentageChunk firstChunk = new PercentageChunk(mainChoice, 1,
+                    votesList.size() * 100 / (double) stateVoteQty, voteProportions);
+            chunks.add(firstChunk);
+            partyChunks.put(mainChoice, chunks);
+        });
+
+        return partyChunks;
     }
 
     public static SortedSet<QueryResult> redistributeSurplusVotes(

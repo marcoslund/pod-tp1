@@ -130,7 +130,6 @@ public class Servant
         }
 
         SortedSet<QueryResult> results;
-        final int voteQty;
         final Map<PoliticalParty, List<Vote>> votes;
 
         // Retrieve and group votes by main choice
@@ -138,35 +137,10 @@ public class Servant
             votes = stateVotes.get(state).values().stream()
                     .flatMap(List::parallelStream)
                     .collect(Collectors.groupingBy(Vote::getMainChoice));
-            voteQty = voteCount;
         }
 
-        final Map<PoliticalParty, List<PercentageChunk>> partyChunks = new HashMap<>();
-        votes.forEach((mainChoice, votesList) -> {
-            final int totalVotes = votesList.size();
-            final Set<VoteProportion> voteProportions = new HashSet<>();
-            Map<Optional<PoliticalParty>, Map<Optional<PoliticalParty>, List<Vote>>> secondThirdCombination =
-                votesList.stream().collect(
-                        Collectors.groupingBy(Vote::getSecondChoice, Collectors.groupingBy(
-                                Vote::getThirdChoice
-                        )
-                    )
-            );
-            secondThirdCombination.forEach((secondChoice, thirdChoiceMap) -> {
-                thirdChoiceMap.forEach((thirdChoice, groupedVotesList) -> {
-                    final List<Optional<PoliticalParty>> choiceComb = new ArrayList<>();
-                    choiceComb.add(secondChoice);
-                    choiceComb.add(thirdChoice);
-                    final double percentage = 100 * groupedVotesList.size() / (double) totalVotes;
-                    voteProportions.add(new VoteProportion(choiceComb, percentage));
-                });
-            });
-            final List<PercentageChunk> chunks = new ArrayList<>();
-            final PercentageChunk firstChunk = new PercentageChunk(mainChoice, 1,
-                    votesList.size() * 100 / (double) voteQty, voteProportions);
-            chunks.add(firstChunk);
-            partyChunks.put(mainChoice, chunks);
-        });
+        final Map<PoliticalParty, List<PercentageChunk>> partyChunks =
+                StateQueryHelper.initializePartyChunks(votes);
 
         results = StateQueryHelper.getResults(partyChunks);
         System.out.println("INIT RESULTS: " + results + "\n");
