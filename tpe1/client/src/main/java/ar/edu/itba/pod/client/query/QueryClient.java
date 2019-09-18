@@ -14,6 +14,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.SortedSet;
+import java.util.stream.Collectors;
 
 public class QueryClient extends Client {
     private static final Logger LOGGER = LoggerFactory.getLogger(QueryClient.class);
@@ -79,7 +80,7 @@ public class QueryClient extends Client {
         if(number != null)
             parsedPollingPlaceNumber = true;
         pollingPlaceNumber = stringToInt(number);
-        if(pollingPlaceNumber == null) {
+        if(parsedPollingPlaceNumber && pollingPlaceNumber == null) {
             LOGGER.error("Polling number (id) must be an integer (was {}).", number);
             return false;
         }
@@ -108,12 +109,18 @@ public class QueryClient extends Client {
             if(isNationalQuery()) {
                 LOGGER.debug("Running national query...");
                 votes = service.queryNationResults();
+                LOGGER.info("{} won the election.", votes.first().getPoliticalParty());
             } else if(isStateQuery()) {
                 LOGGER.debug("Running state query...");
                 votes = service.queryStateResults(state);
+                LOGGER.info("{} won the election in state {}.",
+                        votes.stream().map(QueryResult::getPoliticalParty)
+                                .collect(Collectors.toList()), state);
             } else {
                 LOGGER.debug("Running table query...");
                 votes = service.queryTableResults(pollingPlaceNumber);
+                LOGGER.info("{} won the election in table {}.",
+                        votes.first().getPoliticalParty(), pollingPlaceNumber);
             }
 
             writeVotesToCsv();
@@ -141,7 +148,7 @@ public class QueryClient extends Client {
 
     private static void writeResultToFile(final FileWriter fw, final QueryResult result)
         throws IOException {
-        fw.write(String.format("%g", result.getPercentage())
+        fw.write(String.format("%.2f", result.getPercentage())
                 + "%;" + result.getPoliticalParty() + "\n");
     }
 }

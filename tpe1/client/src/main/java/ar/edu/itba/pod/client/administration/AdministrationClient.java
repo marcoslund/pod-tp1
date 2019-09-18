@@ -52,9 +52,11 @@ public class AdministrationClient extends Client {
             switch (action) {
                 case OPEN:
                     service.startElection();
+                    LOGGER.info("Election has started.");
                     break;
                 case CLOSE:
                     service.endElection();
+                    LOGGER.info("Election has ended.");
                     break;
                 case STATE:
                     ElectionState es = service.queryElection();
@@ -63,7 +65,7 @@ public class AdministrationClient extends Client {
             }
         } catch (IllegalElectionStateException e) {
             ElectionState state = service.queryElection();
-            LOGGER.error("Could not execute operation: {}. The election is currently {}", action, state);
+            LOGGER.error("Could not execute operation: {}. The election is currently {}.", action, state);
         }
     }
 }
