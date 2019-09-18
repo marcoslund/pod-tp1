@@ -3,14 +3,12 @@ package ar.edu.itba.pod.services;
 import ar.edu.itba.pod.interfaces.ElectionState;
 import ar.edu.itba.pod.interfaces.PoliticalParty;
 import ar.edu.itba.pod.interfaces.State;
+import ar.edu.itba.pod.interfaces.exceptions.ConflictException;
 import ar.edu.itba.pod.interfaces.exceptions.IllegalElectionStateException;
 import ar.edu.itba.pod.interfaces.exceptions.PollingPlaceNotFoundException;
 import ar.edu.itba.pod.interfaces.models.QueryResult;
 import ar.edu.itba.pod.interfaces.models.Vote;
-import ar.edu.itba.pod.interfaces.services.AdministrationService;
-import ar.edu.itba.pod.interfaces.services.MonitoringService;
-import ar.edu.itba.pod.interfaces.services.QueryService;
-import ar.edu.itba.pod.interfaces.services.VotingService;
+import ar.edu.itba.pod.interfaces.services.*;
 import ar.edu.itba.pod.model.PercentageChunk;
 import ar.edu.itba.pod.services.helpers.NationalQueryHelper;
 import ar.edu.itba.pod.services.helpers.QueryHelper;
@@ -30,6 +28,7 @@ public class Servant
     private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
     private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
+    private static final Map<Integer, Map<PoliticalParty, RemoteMonitoringClient>> fiscalsMap = new HashMap<>();
     private static int voteCount = 0;
 
     public Servant() throws RemoteException {
@@ -73,9 +72,33 @@ public class Servant
     }
 
     @Override
-    public void registerFiscal(final PoliticalParty politicalParty, final long tableNumber)
-            throws RemoteException, IllegalElectionStateException {
+    public void registerFiscal(RemoteMonitoringClient monitoringClient, Integer pollingPlaceNumber,
+                               PoliticalParty politicalParty)
+            throws RemoteException, ConflictException, IllegalElectionStateException {
 
+        if(electionStarted.get() || electionFinished.get()) {
+            throw new IllegalElectionStateException("Could not register fiscal. " +
+                    "Election started or finished");
+        }
+
+        synchronized (fiscalsMap) {
+
+            Optional<Map<PoliticalParty, RemoteMonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(pollingPlaceNumber));
+
+            if (!fiscals.isPresent()) {
+                fiscalsMap.put(pollingPlaceNumber, new HashMap<>());
+                LOGGER.info("Fiscal from party {} registered in table {}.",
+                        politicalParty, pollingPlaceNumber);
+            }
+            if (fiscalsMap.get(pollingPlaceNumber).get(politicalParty) != null) {
+                LOGGER.error("There is already a fiscal of party {} in table {}.",
+                politicalParty, pollingPlaceNumber);
+                throw new ConflictException("There is already a fiscal of party "
+                        + politicalParty + " in table " + pollingPlaceNumber + ".");
+            }
+
+            fiscalsMap.get(pollingPlaceNumber).put(politicalParty, monitoringClient);
+        }
     }
 
     @Override
@@ -184,7 +207,6 @@ public class Servant
 
         Map<PoliticalParty, Long> voteQtyByParty;
         int voteCount;
-
         // Calculate amount of votes by parties
         synchronized (stateVotes) {
             voteQtyByParty = tableVotes.parallelStream()
@@ -225,9 +247,15 @@ public class Servant
                         .get(vote.getPollingPlaceNumber())
                         .add(vote);
                 voteCount++;
+
+                if(fiscalsMap.get((int)(long)vote.getPollingPlaceNumber()) != null) {
+                    for (PoliticalParty politicalParty : fiscalsMap.get((int)(long)vote.getPollingPlaceNumber()).keySet()) {
+                        if (vote.getPoliticalParties().contains(politicalParty)) {
+                            fiscalsMap.get((int)(long)vote.getPollingPlaceNumber()).get(politicalParty).notifyVote(vote);
+                        }
+                    }
+                }
             }
         }
-
     }
-
 }

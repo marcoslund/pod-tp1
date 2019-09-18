@@ -93,4 +93,10 @@ public class Vote implements Serializable {
         }
         return pp;
     }
+
+    public List<PoliticalParty> getPoliticalParties()
+    {
+        return parties;
+    }
+
 }
