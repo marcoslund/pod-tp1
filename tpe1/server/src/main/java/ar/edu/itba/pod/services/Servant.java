@@ -163,24 +163,24 @@ public class Servant
             });
             final List<PercentageChunk> chunks = new ArrayList<>();
             final PercentageChunk firstChunk = new PercentageChunk(mainChoice, 1,
-                    votesList.size() / (double) voteQty, voteProportions);
+                    votesList.size() * 100 / (double) voteQty, voteProportions);
             chunks.add(firstChunk);
             partyChunks.put(mainChoice, chunks);
         });
 
         // LLENAR RESULTS
         results = StateQueryHelper.getResults(partyChunks);
-
+        System.out.println(results);
         // If not enough candidates chosen or exactly as needed, return them
         if(votes.size() <= StateQueryHelper.REPS_PER_STATE)
             return results;
 
-        while(!StateQueryHelper.foundWinners(results)) {
-            while(StateQueryHelper.candidateHasSurplus(results.first())) {
+        //while(!StateQueryHelper.foundWinners(results)) {
+            //while(StateQueryHelper.candidateHasSurplus(results.first())) {
                 results = StateQueryHelper.redistributeSurplusVotes(partyChunks, results.first());
-            }
-        }
-
+            //}
+        //}
+        System.out.println(results);
 //
 //        while(!StateQueryHelper.foundWinners(results)) {
 //            while(StateQueryHelper.candidateHasSurplus(results.first())) {

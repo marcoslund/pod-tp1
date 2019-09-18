@@ -18,7 +18,15 @@ public class StateQueryHelper {
     }
 
     public static boolean candidateHasSurplus(final QueryResult result) {
-        return Double.compare(result.getPercentage(), getWinningPercentage()) >= 0;
+        return Double.compare(result.getPercentage(), getWinningPercentage()) > 0;
+    }
+
+    private static boolean candidateHasSurplus(
+            final Map<PoliticalParty, List<PercentageChunk>> partyChunks,
+            final PoliticalParty party) {
+        return Double.compare(
+                partyChunks.get(party).stream().mapToDouble(PercentageChunk::getPercentage).sum(),
+                getWinningPercentage()) > 0;
     }
 
     private static double getWinningPercentage() {
@@ -33,12 +41,17 @@ public class StateQueryHelper {
             final Map<PoliticalParty, List<PercentageChunk>> partyChunks,
             final QueryResult surplusResult) {
 
-        final SortedSet<QueryResult> tmp = new TreeSet<>();
         final List<PercentageChunk> chunkList = partyChunks.get(surplusResult.getPoliticalParty());
         double surplusPercentage = surplusResult.getPercentage() - getWinningPercentage();
 
-        while(candidateHasSurplus(surplusResult)) {
+        while(candidateHasSurplus(partyChunks, surplusResult.getPoliticalParty())) {
             final PercentageChunk chunkToDistribute = chunkList.get(chunkList.size() - 1);
+//            System.out.println(chunkToDistribute);
+//            try {
+//                Thread.sleep(5000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
 
             final double currentSurplusPercentage = surplusPercentage;
             Map<Optional<PoliticalParty>, List<VoteProportion>> splitFragments =
@@ -49,7 +62,8 @@ public class StateQueryHelper {
 
             splitFragments.forEach((partyOpt, props) -> {
                 partyOpt.ifPresent(party -> {
-                    partyChunks.get(party).add(generateChunk(props, currentSurplusPercentage,
+                    if(partyChunks.containsKey(party))
+                        partyChunks.get(party).add(generateChunk(props, currentSurplusPercentage,
                             party, chunkToDistribute));
                 });
             });
@@ -60,8 +74,8 @@ public class StateQueryHelper {
 
             surplusPercentage -= chunkToDistribute.getPercentage();
         }
-        
-        return tmp;
+
+        return getResults(partyChunks);
     }
 
     private static PercentageChunk generateChunk(
