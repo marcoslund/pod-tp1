@@ -6,7 +6,7 @@ Se provee un script para compilar todos los proyectos y extraerlos.
 ```bash
 cd tpe1
 chmod u+x extract-binaries.sh
-./extract-binaries
+./extract-binaries.sh
 ```
 
 *Nota*: Es necesario contar con Java 8 y Maven instalados y con sus respectivas variables de entorno configuradas.
@@ -25,12 +25,6 @@ Directorio: `tpe1`.
 
 ```bash
 ./run-server.sh
-```
-
-### Simulación de flujo básico
-*Nota*: esta simulación funcionará si se iniciaron el RMI Registry y el servidor previamente y tal como está por defecto en los scripts provistos.
-```bash
-./simulate-vote.sh
 ```
 
 ### Distintos clientes
@@ -78,7 +72,7 @@ sed -i "s/localhost:1099/${address}/g" run-admin-client.sh
 
 *Cliente de votación*
 ```bash
-# Cambia archivo de origen de votos (por defecto utiliza el archivo 'votes.csv')
+# Cambia archivo de origen de votos (por defecto utiliza el archivo 'stv_votes.csv')
 votes=./stv_votes.csv
 sed -i "s=./stv_votes.csv=${votes}=g" run-voting-client.sh
 
