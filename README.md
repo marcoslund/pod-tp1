@@ -79,8 +79,8 @@ sed -i "s/localhost:1099/${address}/g" run-admin-client.sh
 *Cliente de votación*
 ```bash
 # Cambia archivo de origen de votos (por defecto utiliza el archivo 'votes.csv')
-votes=votes.csv
-sed -i "s=./votes.csv=${votes}=g" run-voting-client.sh
+votes=./stv_votes.csv
+sed -i "s=./stv_votes.csv=${votes}=g" run-voting-client.sh
 
 sed -i "s/localhost:1099/${address}/g" run-voting-client.sh
 
