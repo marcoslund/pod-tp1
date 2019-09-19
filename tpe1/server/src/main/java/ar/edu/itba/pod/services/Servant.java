@@ -85,7 +85,7 @@ public class Servant
         Optional<Map<PoliticalParty, RemoteMonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(pollingPlaceNumber));
 
         if (!fiscals.isPresent()) {
-            fiscalsMap.put(pollingPlaceNumber, new HashMap<>());
+            fiscalsMap.put(pollingPlaceNumber, new ConcurrentHashMap<>());
             LOGGER.info("Fiscal from party {} registered in table {}.",
                     politicalParty, pollingPlaceNumber);
         }
