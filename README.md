@@ -14,11 +14,13 @@ chmod u+x extract-binaries.sh
 ## Ejecución
 
 ### RMI Registry
+Directorio: `tpe1`
 ```bash
 ./run-registry.sh
 ```
 
 ### Servidor
+Directorio: `tpe1`.
 *Nota*: por defecto escucha en `localhost:1099`.
 
 ```bash
@@ -34,16 +36,17 @@ chmod u+x extract-binaries.sh
 ### Distintos clientes
 *Nota*: por defecto, todos los clientes intentan conectarse a `localhost:1099`.
 
-Este script permite modificar los scripts que se encuentren en el estado inicial.
+Este script permite modificar los scripts que se encuentren en el estado inmediatamente posterior a la compilación del proyecto.
 
-Previamente a correr cualquier cliente se recomienda correr este script (personalizando la dirección y el puerto). En requisito encontrarse en el directorio `client/target/tpe1-client-1.0-SNAPSHOT`. Los comandos para modificar los valores solo funcionan si éstos se encuentran en su estado original.
+Previamente a correr cualquier cliente se recomienda correr este script (personalizando la dirección y el puerto). En requisito encontrarse en el directorio `tpe1/client/target/tpe1-client-1.0-SNAPSHOT`. Los comandos para modificar los valores solo funcionan si éstos se encuentran en su estado original.
 
 Se incluyen algunos archivos csv de ejemplo, y éstos se encuentran en el mismo directorio que los scripts de los clientes.
 ```bash
+# Luego de compilar
 cd ./client/target/tpe1-client-1.0-SNAPSHOT
 mkdir backup
 cp *.sh backup/
-address="192.168.1.10:1099"
+address="localhost:1099" # la nueva dirección
 ```
 
 *Cliente de fiscalización*
@@ -77,7 +80,7 @@ sed -i "s/localhost:1099/${address}/g" run-admin-client.sh
 ```bash
 # Cambia archivo de origen de votos (por defecto utiliza el archivo 'votes.csv')
 votes=votes.csv
-sed -i "s/votes.csv/${votes}/g" run-voting-client.sh
+sed -i "s=./votes.csv=${votes}=g" run-voting-client.sh
 
 sed -i "s/localhost:1099/${address}/g" run-voting-client.sh
 
@@ -85,11 +88,14 @@ sed -i "s/localhost:1099/${address}/g" run-voting-client.sh
 ```
 
 *Clientes de consulta*
-(por defecto dejan sus resultados en ./result.csv)
+(por defecto dejan sus resultados en `./result.csv`)
 ```bash
+outpath=result.csv
+
 # Cliente de consulta de mesa
 number=1000
 sed -i "s/1000/${number}/g" run-table-query-client.sh
+sed -i "s=./result.csv=${outpath}=g" run-table-query-client.sh
 sed -i "s/localhost:1099/${address}/g" run-table-query-client.sh
 
 ./run-table-query-client.sh
@@ -97,11 +103,13 @@ sed -i "s/localhost:1099/${address}/g" run-table-query-client.sh
 # Cliente de consulta de estado
 state=jungle
 sed -i "s/jungle/${number}/g" run-state-query-client.sh
+sed -i "s=./result.csv=${outpath}=g" run-state-query-client.sh
 sed -i "s/localhost:1099/${address}/g" run-state-query-client.sh
 
 ./run-state-query-client.sh
 
 # Cliente de consulta nacional
+sed -i "s=./result.csv=${outpath}=g" run-national-query-client.sh
 sed -i "s/localhost:1099/${address}/g" run-national-query-client.sh
 
 ./run-national-query-client.sh
