@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.rmi.RemoteException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -28,7 +29,7 @@ public class Servant
     private static final AtomicBoolean electionStarted = new AtomicBoolean(false);
     private static final AtomicBoolean electionFinished = new AtomicBoolean(false);
     private static final Map<State, Map<Long, List<Vote>>> stateVotes = new HashMap<>();
-    private static final Map<Integer, Map<PoliticalParty, RemoteMonitoringClient>> fiscalsMap = new HashMap<>();
+    private static final Map<Integer, Map<PoliticalParty, RemoteMonitoringClient>> fiscalsMap = new ConcurrentHashMap<>();
     private static int voteCount = 0;
 
     public Servant() throws RemoteException {
@@ -81,25 +82,22 @@ public class Servant
                     "Election started or finished");
         }
 
-        synchronized (fiscalsMap) {
+        Optional<Map<PoliticalParty, RemoteMonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(pollingPlaceNumber));
 
-            Optional<Map<PoliticalParty, RemoteMonitoringClient>> fiscals = Optional.ofNullable(fiscalsMap.get(pollingPlaceNumber));
-
-            if (!fiscals.isPresent()) {
-                fiscalsMap.put(pollingPlaceNumber, new HashMap<>());
-                LOGGER.info("Fiscal from party {} registered in table {}.",
-                        politicalParty, pollingPlaceNumber);
-            }
-            if (fiscalsMap.get(pollingPlaceNumber).get(politicalParty) != null) {
-                LOGGER.error("There is already a fiscal of party {} in table {}.",
-                politicalParty, pollingPlaceNumber);
-
-                throw new ConflictException("There is already a fiscal of party "
-                        + politicalParty + " in table " + pollingPlaceNumber + ".");
-            }
-
-            fiscalsMap.get(pollingPlaceNumber).put(politicalParty, monitoringClient);
+        if (!fiscals.isPresent()) {
+            fiscalsMap.put(pollingPlaceNumber, new HashMap<>());
+            LOGGER.info("Fiscal from party {} registered in table {}.",
+                    politicalParty, pollingPlaceNumber);
         }
+        if (fiscalsMap.get(pollingPlaceNumber).get(politicalParty) != null) {
+            LOGGER.error("There is already a fiscal of party {} in table {}.",
+            politicalParty, pollingPlaceNumber);
+
+            throw new ConflictException("There is already a fiscal of party "
+                    + politicalParty + " in table " + pollingPlaceNumber + ".");
+        }
+
+        fiscalsMap.get(pollingPlaceNumber).put(politicalParty, monitoringClient);
     }
 
     @Override
@@ -148,6 +146,8 @@ public class Servant
             // Update percentages based on new vote distribution
             results = NationalQueryHelper.updateResults(results, votes, voteQty);
         }
+
+        LOGGER.info(results.toString());
         return results;
     }
 
